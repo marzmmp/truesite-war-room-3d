@@ -1077,65 +1077,36 @@ const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.42,128),cherryOak
 tTop.position.y=TABLE_Y; tTop.receiveShadow=true; tTop.castShadow=true; scene.add(tTop);
 
 // ── Table edge band — engraved sequence 3-5-6-5-3-6-9-9-6-3 ─────────────────
-// Static base texture: pitch black with engraved numbers, no color shift
+// Each character illuminates one by one, cycling around the full circumference
 const SEQUENCE='3·5·6·5·3·6·9·9·6·3·';
-const EDGE_W=8192, EDGE_H=160;
-const edgeBaseCanvas=document.createElement('canvas');
-edgeBaseCanvas.width=EDGE_W; edgeBaseCanvas.height=EDGE_H;
-const ebx=edgeBaseCanvas.getContext('2d');
+const EDGE_W=4096, EDGE_H=160;
+const EDGE_FONT=`bold ${Math.round(EDGE_H*0.52)}px Georgia,serif`;
 
-// ── Pitch black base ──────────────────────────────────────────────────────────
-ebx.fillStyle='#050101'; ebx.fillRect(0,0,EDGE_W,EDGE_H);
+// ── Off-screen measurement canvas ────────────────────────────────────────────
+const _emx=(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;return c.getContext('2d');})();
+_emx.font=EDGE_FONT;
 
-// Subtle marble texture to match top
-for(let i=0;i<80;i++){
-  const y=Math.random()*EDGE_H;
-  ebx.beginPath(); ebx.moveTo(0,y); ebx.lineTo(EDGE_W,y+(Math.random()-0.5)*6);
-  ebx.strokeStyle=`rgba(30,8,3,${(0.02+Math.random()*0.04).toFixed(3)})`;
-  ebx.lineWidth=0.6+Math.random()*0.8; ebx.stroke();
+// Build full repeating character list with x positions
+const edgeChars=[]; // [{char, x, w}]
+{
+  // measure one tile
+  let tileW=0;
+  for(const ch of SEQUENCE){ tileW+=_emx.measureText(ch).width*0.90; }
+  const numTiles=Math.ceil(EDGE_W/tileW)+2;
+  const fullSeq=SEQUENCE.repeat(numTiles);
+  let px=6;
+  for(const ch of fullSeq){
+    const cw=_emx.measureText(ch).width*0.90;
+    if(px>EDGE_W+80) break;
+    edgeChars.push({char:ch, x:px, w:cw});
+    px+=cw;
+  }
 }
+const TOTAL_CHARS=edgeChars.length;
+// Seconds for one full lap around all chars
+const LAP_SECS=20;
 
-// Carved border grooves top & bottom
-[EDGE_H*0.10, EDGE_H*0.90].forEach(gy=>{
-  // Shadow groove
-  ebx.beginPath(); ebx.moveTo(0,gy); ebx.lineTo(EDGE_W,gy);
-  ebx.strokeStyle='rgba(0,0,0,0.8)'; ebx.lineWidth=3.5; ebx.stroke();
-  // Light catch on groove edge
-  ebx.beginPath(); ebx.moveTo(0,gy+2); ebx.lineTo(EDGE_W,gy+2);
-  ebx.strokeStyle='rgba(160,120,90,0.12)'; ebx.lineWidth=1; ebx.stroke();
-});
-
-// Engraved numbers — measure first to get even spacing across full 8192px
-ebx.font=`bold ${EDGE_H*0.52}px Georgia,serif`;
-ebx.textBaseline='middle';
-// Measure one full sequence tile
-const digits=SEQUENCE.split('');
-let tileW=0;
-digits.forEach(d=>{ tileW+=ebx.measureText(d).width*0.92; });
-// How many full tiles fit + partial?
-const numTiles=Math.ceil(EDGE_W/tileW)+1;
-const fullSeq=(SEQUENCE).repeat(numTiles);
-let px=0;
-// Store char positions for the spotlight animation
-const edgeCharPositions=[]; // [{x, w, char}]
-for(let ci=0;ci<fullSeq.length && px<EDGE_W+60;ci++){
-  const ch=fullSeq[ci];
-  const cw=ebx.measureText(ch).width*0.92;
-  edgeCharPositions.push({x:px+cw/2, w:cw, char:ch});
-  // Carved effect layers:
-  // 1. Deep shadow offset (bottom-right) — groove depth
-  ebx.fillStyle='rgba(0,0,0,0.9)';
-  ebx.fillText(ch, px+1.8, EDGE_H*0.5+2.0);
-  // 2. Base fill — very dark, nearly invisible without light
-  ebx.fillStyle='rgba(8,2,1,0.95)';
-  ebx.fillText(ch, px, EDGE_H*0.5);
-  // 3. Carved highlight — faint edge catch (top-left), always visible as engraving hint
-  ebx.fillStyle='rgba(90,65,50,0.22)';
-  ebx.fillText(ch, px-0.8, EDGE_H*0.5-0.9);
-  px+=cw;
-}
-
-// Build the animated edge canvas (spotlight layer drawn on top each frame)
+// ── Live draw canvas (redrawn every frame) ───────────────────────────────────
 const edgeLiveCanvas=document.createElement('canvas');
 edgeLiveCanvas.width=EDGE_W; edgeLiveCanvas.height=EDGE_H;
 const elx=edgeLiveCanvas.getContext('2d');
@@ -1143,53 +1114,102 @@ const edgeTex=new THREE.CanvasTexture(edgeLiveCanvas);
 edgeTex.colorSpace=THREE.SRGBColorSpace;
 edgeTex.needsUpdate=true;
 
-// Mesh
 const edgeBand=new THREE.Mesh(
   new THREE.CylinderGeometry(4.503,4.503,0.40,256,1,true),
-  new THREE.MeshBasicMaterial({
-    map:edgeTex,
-    side:THREE.DoubleSide,
-    transparent:false,
-    toneMapped:false
-  })
+  new THREE.MeshBasicMaterial({map:edgeTex,side:THREE.DoubleSide,transparent:false,toneMapped:false})
 );
 edgeBand.position.y=TABLE_Y; scene.add(edgeBand);
 
-// Track total sequence width for spotlight loop
-const edgeTotalTileW=(()=>{let w=0; SEQUENCE.split('').forEach(d=>{
-  ebx.font=`bold ${EDGE_H*0.52}px Georgia,serif`;
-  w+=ebx.measureText(d).width*0.92; }); return w;})();
+// Track last active char to throttle redraws
+let _edgeLastIdx=-1;
 
-// Spotlight state
-let edgeSpotX=0; // 0..EDGE_W, wraps
-const SPOT_SPEED=EDGE_W/18; // full lap in ~18 seconds
-const SPOT_RADIUS=EDGE_W*0.045; // how wide the gold glow is
+function drawEdgeBand(t,dt){
+  // Which character is currently illuminated?
+  const progress=(t%LAP_SECS)/LAP_SECS;           // 0..1 around the lap
+  const activeIdx=Math.floor(progress*TOTAL_CHARS)%TOTAL_CHARS;
+  if(activeIdx===_edgeLastIdx) return;             // no change — skip redraw
+  _edgeLastIdx=activeIdx;
 
-function drawEdgeBand(t,delta){
-  // Advance spotlight
-  edgeSpotX=(edgeSpotX+SPOT_SPEED*delta)%EDGE_W;
-
-  // Composite: base static texture first
   elx.clearRect(0,0,EDGE_W,EDGE_H);
-  elx.drawImage(edgeBaseCanvas,0,0);
 
-  // Gold-white spotlight — radial gradient sweeping horizontally
-  // Draw twice to handle wrap-around
-  [-EDGE_W,0,EDGE_W].forEach(offset=>{
-    const sx=edgeSpotX+offset;
-    const sg=elx.createRadialGradient(sx,EDGE_H/2,0,sx,EDGE_H/2,SPOT_RADIUS);
-    sg.addColorStop(0,'rgba(255,248,200,0.95)');   // bright gold-white core
-    sg.addColorStop(0.15,'rgba(240,210,130,0.75)'); // warm gold mid
-    sg.addColorStop(0.40,'rgba(200,160,80,0.40)');  // amber fade
-    sg.addColorStop(0.70,'rgba(150,100,40,0.15)');  // dim outer
-    sg.addColorStop(1,'rgba(0,0,0,0)');
-    // Only illuminate the text band (not the border grooves)
-    elx.save();
-    elx.globalCompositeOperation='lighter';
-    elx.fillStyle=sg;
-    elx.fillRect(sx-SPOT_RADIUS,EDGE_H*0.12,SPOT_RADIUS*2,EDGE_H*0.76);
-    elx.restore();
+  // ── Pitch-black base ───────────────────────────────────────────────────────
+  elx.fillStyle='#050101'; elx.fillRect(0,0,EDGE_W,EDGE_H);
+
+  // Subtle marble grain
+  elx.save();
+  for(let i=0;i<50;i++){
+    const y=Math.random()*EDGE_H;
+    elx.beginPath(); elx.moveTo(0,y); elx.lineTo(EDGE_W,y+(Math.random()-0.5)*5);
+    elx.strokeStyle=`rgba(28,7,3,0.04)`; elx.lineWidth=0.6; elx.stroke();
+  }
+  elx.restore();
+
+  // Carved border lines top & bottom
+  [EDGE_H*0.10, EDGE_H*0.90].forEach(gy=>{
+    elx.beginPath(); elx.moveTo(0,gy); elx.lineTo(EDGE_W,gy);
+    elx.strokeStyle='rgba(0,0,0,0.75)'; elx.lineWidth=3; elx.stroke();
+    elx.beginPath(); elx.moveTo(0,gy+1.5); elx.lineTo(EDGE_W,gy+1.5);
+    elx.strokeStyle='rgba(140,100,70,0.10)'; elx.lineWidth=1; elx.stroke();
   });
+
+  // ── Draw all characters ────────────────────────────────────────────────────
+  elx.font=EDGE_FONT;
+  elx.textBaseline='middle';
+
+  // Determine trail: 2 chars before still slightly warm, active=full gold-white
+  for(let i=0;i<edgeChars.length;i++){
+    const {char,x,w}=edgeChars[i];
+    const cy=EDGE_H*0.5;
+
+    // Distance from active index (wrap-aware)
+    let dist=i-activeIdx;
+    if(dist<0) dist+=TOTAL_CHARS;
+
+    if(dist===0){
+      // ── ACTIVE char — bright gold-white illuminated ──────────────────────
+      // Glow halo behind char
+      const halo=elx.createRadialGradient(x+w/2,cy,0,x+w/2,cy,w*1.6);
+      halo.addColorStop(0,'rgba(255,252,200,0.55)');
+      halo.addColorStop(0.4,'rgba(240,210,120,0.25)');
+      halo.addColorStop(1,'rgba(0,0,0,0)');
+      elx.fillStyle=halo;
+      elx.fillRect(x-w*0.8,cy-EDGE_H*0.4,w*2.6,EDGE_H*0.8);
+
+      // Shadow depth (carve)
+      elx.fillStyle='rgba(0,0,0,0.7)';
+      elx.fillText(char,x+1.5,cy+1.8);
+      // Bright gold-white fill
+      elx.fillStyle='rgba(255,252,210,1.0)';
+      elx.fillText(char,x,cy);
+      // White specular top-left edge
+      elx.fillStyle='rgba(255,255,255,0.55)';
+      elx.fillText(char,x-0.7,cy-0.8);
+
+    } else if(dist===1){
+      // One step behind — warm amber trail
+      elx.fillStyle='rgba(0,0,0,0.65)';
+      elx.fillText(char,x+1.5,cy+1.8);
+      elx.fillStyle='rgba(200,150,60,0.65)';
+      elx.fillText(char,x,cy);
+
+    } else if(dist===2){
+      // Two steps behind — faint ember
+      elx.fillStyle='rgba(0,0,0,0.6)';
+      elx.fillText(char,x+1.5,cy+1.8);
+      elx.fillStyle='rgba(130,80,25,0.35)';
+      elx.fillText(char,x,cy);
+
+    } else {
+      // ── DARK / engraved — nearly invisible, just the carve hint ──────────
+      elx.fillStyle='rgba(0,0,0,0.80)';
+      elx.fillText(char,x+1.4,cy+1.6);
+      elx.fillStyle='rgba(6,2,1,0.92)';
+      elx.fillText(char,x,cy);
+      // Faint carved highlight so geometry is still readable
+      elx.fillStyle='rgba(75,50,35,0.18)';
+      elx.fillText(char,x-0.7,cy-0.8);
+    }
+  }
 
   edgeTex.needsUpdate=true;
 }
@@ -1618,7 +1638,7 @@ renderer.setAnimationLoop(()=>{
   const cy=zoom*Math.sin(-rotX)+1.5;
   camera.position.set(cx,cy,cz); camera.lookAt(0,1.5,0);
   drawFOL(t); drawKG(t);
-  drawEdgeBand(t,delta);
+  drawEdgeBand(t,0.016);
   // color update — throttled to 20fps
   if(t-lastColorUpdate>0.05){
     lastColorUpdate=t;

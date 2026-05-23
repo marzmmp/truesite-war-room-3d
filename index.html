@@ -1145,24 +1145,114 @@ const stretcherHub=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),
   new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.92}));
 stretcherHub.position.y=TABLE_Y-2.02; scene.add(stretcherHub);
 
-// FOL animated overlay on table
-const folCanvas=mkCanvas(512,512);
+// FOL engraved overlay on table — carved groove effect
+const folCanvas=mkCanvas(1024,1024);
 const folCtx=folCanvas.getContext('2d');
 const folTex=new THREE.CanvasTexture(folCanvas);
-const folDisc=new THREE.Mesh(new THREE.CircleGeometry(4.45,80),new THREE.MeshBasicMaterial({map:folTex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
-folDisc.rotation.x=-Math.PI/2; folDisc.position.y=TABLE_Y+0.22; scene.add(folDisc);
+folTex.colorSpace=THREE.SRGBColorSpace;
+// Slight inset below table surface so it reads as carved INTO the slab
+const folDisc=new THREE.Mesh(
+  new THREE.CircleGeometry(4.44,128),
+  new THREE.MeshStandardMaterial({
+    map:folTex,
+    transparent:true,
+    side:THREE.DoubleSide,
+    depthWrite:false,
+    roughness:0.85,     // carved wood — not shiny
+    metalness:0.0,
+    toneMapped:false
+  })
+);
+folDisc.rotation.x=-Math.PI/2;
+folDisc.position.y=TABLE_Y+0.222; // fractionally above slab face
+scene.add(folDisc);
 let lastFOL=-1;
 function drawFOL(t){
-  if(t-lastFOL<0.055)return; lastFOL=t;
-  const S=512,C=256; folCtx.clearRect(0,0,S,S);
-  const{r,g,b}=getColor(t); const d=1/PHI;
-  const c1=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.55)`;
-  const c2=`rgba(${Math.round(r*d)},${Math.round(g*d)},${Math.round(b*d)},0.3)`;
-  const R=44;
-  function fc(x,y,r2,col,lw){folCtx.beginPath();folCtx.arc(x,y,r2,0,Math.PI*2);folCtx.strokeStyle=col;folCtx.lineWidth=lw;folCtx.stroke();}
-  fc(C,C,R,c1,1.6);
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;fc(C+Math.cos(a)*R,C+Math.sin(a)*R,R,c1,1.3);}
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;fc(C+Math.cos(a)*2*R,C+Math.sin(a)*2*R,R,c2,1.0);fc(C+Math.cos(a+Math.PI/6)*R*Math.sqrt(3),C+Math.sin(a+Math.PI/6)*R*Math.sqrt(3),R,c2,0.8);}
+  if(t-lastFOL<0.045)return; lastFOL=t;
+  const S=1024, C=512;
+  folCtx.clearRect(0,0,S,S);
+
+  const{r,g,b}=getColor(t);
+  const d=1/PHI;
+  // Phi-shifted secondary color
+  const r2c=Math.round(r*d), g2c=Math.round(g*d), b2c=Math.round(b*d);
+
+  // Scale: R=88 matches the 512->1024 upscale of original R=44
+  const R=88;
+
+  // ── Helper: draw one carved circle ──────────────────────────────────────
+  function carvedCircle(cx,cy,radius,phiR,phiG,phiB,alpha){
+    // 1. Outer shadow lip — dark edge that sells the depth illusion
+    folCtx.beginPath();
+    folCtx.arc(cx,cy,radius+2.5,0,Math.PI*2);
+    folCtx.strokeStyle=`rgba(0,0,0,0.55)`;
+    folCtx.lineWidth=5;
+    folCtx.stroke();
+
+    // 2. Inner shadow — the groove floor is darker
+    folCtx.beginPath();
+    folCtx.arc(cx,cy,radius,0,Math.PI*2);
+    folCtx.strokeStyle=`rgba(0,0,0,0.40)`;
+    folCtx.lineWidth=6;
+    folCtx.stroke();
+
+    // 3. Highlight lip on opposite side — simulates light catching the groove edge
+    folCtx.save();
+    folCtx.beginPath();
+    folCtx.arc(cx,cy,radius-1,Math.PI*1.1,Math.PI*1.9);
+    folCtx.strokeStyle=`rgba(255,240,200,0.18)`;
+    folCtx.lineWidth=2;
+    folCtx.stroke();
+    folCtx.restore();
+
+    // 4. Phi color pulse — faint luminance inside the groove (the carved channel glows)
+    folCtx.beginPath();
+    folCtx.arc(cx,cy,radius,0,Math.PI*2);
+    folCtx.strokeStyle=`rgba(${phiR},${phiG},${phiB},${alpha})`;
+    folCtx.lineWidth=2.2;
+    folCtx.stroke();
+  }
+
+  // ── Draw FOL geometry — same sacred sequence as before ──────────────────
+  // Center circle
+  carvedCircle(C, C, R, Math.round(r), Math.round(g), Math.round(b), 0.55);
+
+  // First ring — 6 petals
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3;
+    carvedCircle(
+      C+Math.cos(a)*R, C+Math.sin(a)*R,
+      R,
+      Math.round(r), Math.round(g), Math.round(b), 0.50
+    );
+  }
+
+  // Second ring — outer petals (phi-shifted color)
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3;
+    carvedCircle(
+      C+Math.cos(a)*2*R, C+Math.sin(a)*2*R,
+      R,
+      r2c, g2c, b2c, 0.32
+    );
+    carvedCircle(
+      C+Math.cos(a+Math.PI/6)*R*Math.sqrt(3),
+      C+Math.sin(a+Math.PI/6)*R*Math.sqrt(3),
+      R,
+      r2c, g2c, b2c, 0.28
+    );
+  }
+
+  // Outer containing circle — the boundary ring
+  folCtx.beginPath();
+  folCtx.arc(C,C,R*2.7,0,Math.PI*2);
+  folCtx.strokeStyle=`rgba(0,0,0,0.45)`;
+  folCtx.lineWidth=5; folCtx.stroke();
+  folCtx.beginPath();
+  folCtx.arc(C,C,R*2.7,0,Math.PI*2);
+  folCtx.strokeStyle=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.22)`;
+  folCtx.lineWidth=2; folCtx.stroke();
+
   folTex.needsUpdate=true;
 }
 

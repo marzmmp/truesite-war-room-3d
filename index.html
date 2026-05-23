@@ -978,60 +978,97 @@ addScreen(mapTexData, 13,4.2, -RW/2+0.12, FY+RH*0.3, 0, Math.PI/2);
 // ─── ROUND TABLE — Cherry Oak Executive ───────────────────────────────────────
 const TABLE_Y=0;
 
-// ── Cherry oak grain surface texture ─────────────────────────────────────────
+// ── Black marbleized cherry oak surface ──────────────────────────────────────
 const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
-  // Base cherry oak — rich warm red-brown
+  // Deep obsidian base — almost black with warm undertone
   const base=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.72);
-  base.addColorStop(0,'#5a1f10');
-  base.addColorStop(0.3,'#4a180d');
-  base.addColorStop(0.65,'#3d1209');
-  base.addColorStop(1,'#2a0c06');
+  base.addColorStop(0,'#1a0805');
+  base.addColorStop(0.35,'#110503');
+  base.addColorStop(0.7,'#0a0302');
+  base.addColorStop(1,'#060101');
   ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
 
-  // Grain lines — radial wood pattern (like a real round table cut)
-  ctx.save();
-  ctx.translate(W/2,H/2);
-  for(let a=0;a<Math.PI*2;a+=0.018){
-    const len=W*0.52+Math.random()*W*0.06;
-    const alpha=(0.06+Math.random()*0.09).toFixed(3);
-    const warm=Math.random()>0.5;
-    ctx.strokeStyle=warm?`rgba(90,28,10,${alpha})`:`rgba(30,8,3,${alpha})`;
-    ctx.lineWidth=0.6+Math.random()*1.2;
+  // Cherry oak grain — visible but dark, warm red-brown under the black
+  ctx.save(); ctx.translate(W/2,H/2);
+  for(let a=0;a<Math.PI*2;a+=0.014){
+    const len=W*0.53+Math.random()*W*0.05;
+    const alpha=(0.03+Math.random()*0.05).toFixed(3);
+    ctx.strokeStyle=`rgba(80,22,8,${alpha})`;
+    ctx.lineWidth=0.5+Math.random()*1.0;
     ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len);
     ctx.stroke();
   }
   ctx.restore();
 
-  // Annual ring lines — concentric, slightly irregular
-  for(let r=18;r<W*0.52;r+=14+Math.random()*8){
-    const alpha=(0.04+Math.random()*0.07).toFixed(3);
-    ctx.beginPath();
-    ctx.arc(W/2,H/2,r,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(20,5,2,${alpha})`;
-    ctx.lineWidth=0.8+Math.random()*1.4;
+  // Black marble veining — bold sweeping veins across the surface
+  function drawVein(sx,sy,angle,length,width,alpha,color){
+    ctx.save();
+    ctx.translate(sx,sy); ctx.rotate(angle);
+    ctx.beginPath(); ctx.moveTo(0,0);
+    // Bezier vein — natural flowing curve
+    const cp1x=length*0.25+Math.random()*80-40;
+    const cp1y=(Math.random()-0.5)*120;
+    const cp2x=length*0.65+Math.random()*80-40;
+    const cp2y=(Math.random()-0.5)*160;
+    ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,length,( Math.random()-0.5)*80);
+    ctx.strokeStyle=color;
+    ctx.lineWidth=width; ctx.globalAlpha=alpha;
     ctx.stroke();
+    // Secondary hairline alongside
+    ctx.lineWidth=width*0.3; ctx.globalAlpha=alpha*0.5;
+    ctx.stroke();
+    ctx.restore(); ctx.globalAlpha=1;
   }
 
-  // Lacquer sheen — high gloss coat layer
-  const sheen=ctx.createRadialGradient(W*0.38,H*0.32,0,W/2,H/2,W*0.62);
-  sheen.addColorStop(0,'rgba(255,200,160,0.18)');
-  sheen.addColorStop(0.35,'rgba(220,140,100,0.08)');
-  sheen.addColorStop(0.8,'rgba(180,80,40,0.04)');
+  // Primary veins — deep charcoal/grey marble veins
+  const veins=[
+    [W*0.1,H*0.2, 0.22, W*0.85, 6,  0.72, '#1c1c1c'],
+    [W*0.05,H*0.6, 0.08, W*0.9,  5,  0.65, '#222222'],
+    [W*0.3,H*0.05, 0.38, W*0.75, 4,  0.60, '#181818'],
+    [W*0.0,H*0.42, 0.18, W*0.65, 3.5,0.55, '#141414'],
+    [W*0.6,H*0.0,  0.52, W*0.55, 3,  0.50, '#202020'],
+    [W*0.2,H*0.85,-0.12, W*0.70, 4,  0.58, '#1a1a1a'],
+    [W*0.75,H*0.7, 0.30, W*0.40, 2.5,0.48, '#161616'],
+  ];
+  veins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
+
+  // Warm gold/amber micro-veins — cherry wood bleeding through marble
+  const warmVeins=[
+    [W*0.25,H*0.3,  0.28, W*0.5, 1.8, 0.35, 'rgba(120,50,15,0.4)'],
+    [W*0.55,H*0.15, 0.42, W*0.45,1.5, 0.28, 'rgba(100,38,10,0.35)'],
+    [W*0.1,H*0.72,  0.12, W*0.6, 1.2, 0.30, 'rgba(110,44,12,0.38)'],
+    [W*0.7,H*0.5, -0.22,  W*0.5, 1.0, 0.25, 'rgba(90,32,8,0.30)'],
+  ];
+  warmVeins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
+
+  // White marble highlight veins — thin bright lines
+  const whiteVeins=[
+    [W*0.15,H*0.35, 0.20, W*0.6,  1.2, 0.22, 'rgba(200,195,190,0.5)'],
+    [W*0.4, H*0.08, 0.45, W*0.5,  0.8, 0.18, 'rgba(210,205,200,0.45)'],
+    [W*0.0, H*0.55, 0.10, W*0.45, 0.7, 0.16, 'rgba(195,190,185,0.4)'],
+  ];
+  whiteVeins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
+
+  // High-gloss lacquer sheen — strong specular highlight (top-left source)
+  const sheen=ctx.createRadialGradient(W*0.3,H*0.25,0,W/2,H/2,W*0.7);
+  sheen.addColorStop(0,'rgba(255,240,220,0.22)');
+  sheen.addColorStop(0.2,'rgba(200,180,160,0.10)');
+  sheen.addColorStop(0.6,'rgba(140,100,70,0.04)');
   sheen.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=sheen; ctx.fillRect(0,0,W,H);
 
-  // Edge darkening — natural shadow at rim
-  const edge=ctx.createRadialGradient(W/2,H/2,W*0.38,W/2,H/2,W*0.54);
+  // Edge vignette
+  const edge=ctx.createRadialGradient(W/2,H/2,W*0.35,W/2,H/2,W*0.56);
   edge.addColorStop(0,'rgba(0,0,0,0)');
-  edge.addColorStop(1,'rgba(0,0,0,0.55)');
+  edge.addColorStop(1,'rgba(0,0,0,0.65)');
   ctx.fillStyle=edge; ctx.fillRect(0,0,W,H);
 });
 
 // ── Cherry oak material ───────────────────────────────────────────────────────
 const cherryOak=new THREE.MeshStandardMaterial({
   map:tableSurface,
-  roughness:0.18,       // lacquered — very low roughness
-  metalness:0.04,
+  roughness:0.06,       // polished marble + lacquer — mirror-like
+  metalness:0.08,
   color:0xffffff        // let texture drive color fully
 });
 
@@ -1113,7 +1150,7 @@ const folCanvas=mkCanvas(512,512);
 const folCtx=folCanvas.getContext('2d');
 const folTex=new THREE.CanvasTexture(folCanvas);
 const folDisc=new THREE.Mesh(new THREE.CircleGeometry(4.45,80),new THREE.MeshBasicMaterial({map:folTex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
-folDisc.rotation.x=-Math.PI/2; folDisc.position.y=TABLE_Y+0.12; scene.add(folDisc);
+folDisc.rotation.x=-Math.PI/2; folDisc.position.y=TABLE_Y+0.22; scene.add(folDisc);
 let lastFOL=-1;
 function drawFOL(t){
   if(t-lastFOL<0.055)return; lastFOL=t;

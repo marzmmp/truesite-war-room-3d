@@ -1076,6 +1076,86 @@ const cherryOak=new THREE.MeshStandardMaterial({
 const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.42,128),cherryOak);
 tTop.position.y=TABLE_Y; tTop.receiveShadow=true; tTop.castShadow=true; scene.add(tTop);
 
+// ── Table edge band — engraved sequence 3-5-6-5-3-6-9-9-6-3 ─────────────────
+// Build a canvas texture that wraps around the cylindrical edge
+const SEQUENCE='3·5·6·5·3·6·9·9·6·3·';  // dot separator, will tile seamlessly
+const edgeBandTex=(()=>{
+  const EW=4096, EH=128;  // wide=circumference, tall=edge thickness
+  const ec=document.createElement('canvas'); ec.width=EW; ec.height=EH;
+  const ex=ec.getContext('2d');
+
+  // Base — dark marbled cherry matching the top
+  const bg=ex.createLinearGradient(0,0,0,EH);
+  bg.addColorStop(0,'#0e0403'); bg.addColorStop(0.4,'#160604'); bg.addColorStop(0.6,'#120503'); bg.addColorStop(1,'#0a0302');
+  ex.fillStyle=bg; ex.fillRect(0,0,EW,EH);
+
+  // Subtle grain lines on the edge
+  for(let i=0;i<60;i++){
+    const y=Math.random()*EH;
+    ex.beginPath(); ex.moveTo(0,y); ex.lineTo(EW,y+Math.random()*8-4);
+    ex.strokeStyle=`rgba(60,18,6,${(0.03+Math.random()*0.06).toFixed(2)})`;
+    ex.lineWidth=0.8; ex.stroke();
+  }
+
+  // Two carved groove lines — top and bottom border
+  [EH*0.12, EH*0.88].forEach(gy=>{
+    ex.beginPath(); ex.moveTo(0,gy); ex.lineTo(EW,gy);
+    ex.strokeStyle='rgba(0,0,0,0.6)'; ex.lineWidth=3; ex.stroke();
+    ex.beginPath(); ex.moveTo(0,gy); ex.lineTo(EW,gy);
+    ex.strokeStyle='rgba(200,146,120,0.25)'; ex.lineWidth=1; ex.stroke();
+  });
+
+  // Carved sequence text — repeating around full circumference
+  ex.save();
+  ex.font=`bold ${EH*0.42}px serif`;
+  ex.textBaseline='middle';
+  ex.textAlign='left';
+
+  const seq=SEQUENCE;
+  const charW=EW/seq.length * 0.98;  // approximate char spacing
+  let x=0;
+  // Tile the sequence across full 4096px width
+  const fullText=(seq).repeat(Math.ceil(EW/(seq.length*charW*0.72))+1);
+  let cx=8;
+  for(let ci=0;ci<fullText.length && cx<EW+40;ci++){
+    const ch=fullText[ci];
+    // Carve shadow — dark outer edge of groove
+    ex.fillStyle='rgba(0,0,0,0.75)';
+    ex.fillText(ch, cx+1.5, EH*0.5+1.5);
+    // Groove depth — very dark fill
+    ex.fillStyle='rgba(4,1,0,0.9)';
+    ex.fillText(ch, cx, EH*0.5);
+    // Highlight catch — light grazing the raised edge
+    ex.fillStyle='rgba(200,180,160,0.20)';
+    ex.fillText(ch, cx-0.8, EH*0.5-0.8);
+    // Phi color pulse — faint rose-gold inner glow (static bake, animation handled separately)
+    ex.fillStyle='rgba(183,110,100,0.28)';
+    ex.fillText(ch, cx, EH*0.5);
+
+    const metrics=ex.measureText(ch);
+    cx+=metrics.width*0.88;
+  }
+  ex.restore();
+
+  const t=new THREE.CanvasTexture(ec);
+  t.colorSpace=THREE.SRGBColorSpace;
+  t.needsUpdate=true;
+  return t;
+})();
+
+// Apply edge texture to a dedicated thin cylinder matching table edge
+const edgeBand=new THREE.Mesh(
+  new THREE.CylinderGeometry(4.502,4.502,0.41,128,1,true),  // open-ended = side face only
+  new THREE.MeshStandardMaterial({
+    map:edgeBandTex,
+    roughness:0.22,
+    metalness:0.04,
+    side:THREE.DoubleSide,
+    toneMapped:false
+  })
+);
+edgeBand.position.y=TABLE_Y; scene.add(edgeBand);
+
 // ── Top edge bevel ring — thin beveled lip ────────────────────────────────────
 const bevelMat=new THREE.MeshStandardMaterial({color:0x3a1008,roughness:0.12,metalness:0.06});
 const tBevel=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.055,14,120),bevelMat);
@@ -1500,6 +1580,13 @@ renderer.setAnimationLoop(()=>{
   const cy=zoom*Math.sin(-rotX)+1.5;
   camera.position.set(cx,cy,cz); camera.lookAt(0,1.5,0);
   drawFOL(t); drawKG(t);
+  // Edge sequence phi glow pulse
+  if(edgeBand && edgeBand.material){
+    const{r,g,b}=getColor(t);
+    edgeBand.material.emissive=new THREE.Color(r/255*0.05,g/255*0.05,b/255*0.05);
+    edgeBand.material.emissiveIntensity=0.35+0.15*Math.sin(t*0.7);
+    edgeBand.material.needsUpdate=true;
+  }
   // color update — throttled to 20fps
   if(t-lastColorUpdate>0.05){
     lastColorUpdate=t;

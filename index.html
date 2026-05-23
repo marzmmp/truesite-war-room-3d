@@ -1077,84 +1077,122 @@ const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.42,128),cherryOak
 tTop.position.y=TABLE_Y; tTop.receiveShadow=true; tTop.castShadow=true; scene.add(tTop);
 
 // ── Table edge band — engraved sequence 3-5-6-5-3-6-9-9-6-3 ─────────────────
-// Build a canvas texture that wraps around the cylindrical edge
-const SEQUENCE='3·5·6·5·3·6·9·9·6·3·';  // dot separator, will tile seamlessly
-const edgeBandTex=(()=>{
-  const EW=4096, EH=128;  // wide=circumference, tall=edge thickness
-  const ec=document.createElement('canvas'); ec.width=EW; ec.height=EH;
-  const ex=ec.getContext('2d');
+// Static base texture: pitch black with engraved numbers, no color shift
+const SEQUENCE='3·5·6·5·3·6·9·9·6·3·';
+const EDGE_W=8192, EDGE_H=160;
+const edgeBaseCanvas=document.createElement('canvas');
+edgeBaseCanvas.width=EDGE_W; edgeBaseCanvas.height=EDGE_H;
+const ebx=edgeBaseCanvas.getContext('2d');
 
-  // Base — dark marbled cherry matching the top
-  const bg=ex.createLinearGradient(0,0,0,EH);
-  bg.addColorStop(0,'#0e0403'); bg.addColorStop(0.4,'#160604'); bg.addColorStop(0.6,'#120503'); bg.addColorStop(1,'#0a0302');
-  ex.fillStyle=bg; ex.fillRect(0,0,EW,EH);
+// ── Pitch black base ──────────────────────────────────────────────────────────
+ebx.fillStyle='#050101'; ebx.fillRect(0,0,EDGE_W,EDGE_H);
 
-  // Subtle grain lines on the edge
-  for(let i=0;i<60;i++){
-    const y=Math.random()*EH;
-    ex.beginPath(); ex.moveTo(0,y); ex.lineTo(EW,y+Math.random()*8-4);
-    ex.strokeStyle=`rgba(60,18,6,${(0.03+Math.random()*0.06).toFixed(2)})`;
-    ex.lineWidth=0.8; ex.stroke();
-  }
+// Subtle marble texture to match top
+for(let i=0;i<80;i++){
+  const y=Math.random()*EDGE_H;
+  ebx.beginPath(); ebx.moveTo(0,y); ebx.lineTo(EDGE_W,y+(Math.random()-0.5)*6);
+  ebx.strokeStyle=`rgba(30,8,3,${(0.02+Math.random()*0.04).toFixed(3)})`;
+  ebx.lineWidth=0.6+Math.random()*0.8; ebx.stroke();
+}
 
-  // Two carved groove lines — top and bottom border
-  [EH*0.12, EH*0.88].forEach(gy=>{
-    ex.beginPath(); ex.moveTo(0,gy); ex.lineTo(EW,gy);
-    ex.strokeStyle='rgba(0,0,0,0.6)'; ex.lineWidth=3; ex.stroke();
-    ex.beginPath(); ex.moveTo(0,gy); ex.lineTo(EW,gy);
-    ex.strokeStyle='rgba(200,146,120,0.25)'; ex.lineWidth=1; ex.stroke();
-  });
+// Carved border grooves top & bottom
+[EDGE_H*0.10, EDGE_H*0.90].forEach(gy=>{
+  // Shadow groove
+  ebx.beginPath(); ebx.moveTo(0,gy); ebx.lineTo(EDGE_W,gy);
+  ebx.strokeStyle='rgba(0,0,0,0.8)'; ebx.lineWidth=3.5; ebx.stroke();
+  // Light catch on groove edge
+  ebx.beginPath(); ebx.moveTo(0,gy+2); ebx.lineTo(EDGE_W,gy+2);
+  ebx.strokeStyle='rgba(160,120,90,0.12)'; ebx.lineWidth=1; ebx.stroke();
+});
 
-  // Carved sequence text — repeating around full circumference
-  ex.save();
-  ex.font=`bold ${EH*0.42}px serif`;
-  ex.textBaseline='middle';
-  ex.textAlign='left';
+// Engraved numbers — measure first to get even spacing across full 8192px
+ebx.font=`bold ${EDGE_H*0.52}px Georgia,serif`;
+ebx.textBaseline='middle';
+// Measure one full sequence tile
+const digits=SEQUENCE.split('');
+let tileW=0;
+digits.forEach(d=>{ tileW+=ebx.measureText(d).width*0.92; });
+// How many full tiles fit + partial?
+const numTiles=Math.ceil(EDGE_W/tileW)+1;
+const fullSeq=(SEQUENCE).repeat(numTiles);
+let px=0;
+// Store char positions for the spotlight animation
+const edgeCharPositions=[]; // [{x, w, char}]
+for(let ci=0;ci<fullSeq.length && px<EDGE_W+60;ci++){
+  const ch=fullSeq[ci];
+  const cw=ebx.measureText(ch).width*0.92;
+  edgeCharPositions.push({x:px+cw/2, w:cw, char:ch});
+  // Carved effect layers:
+  // 1. Deep shadow offset (bottom-right) — groove depth
+  ebx.fillStyle='rgba(0,0,0,0.9)';
+  ebx.fillText(ch, px+1.8, EDGE_H*0.5+2.0);
+  // 2. Base fill — very dark, nearly invisible without light
+  ebx.fillStyle='rgba(8,2,1,0.95)';
+  ebx.fillText(ch, px, EDGE_H*0.5);
+  // 3. Carved highlight — faint edge catch (top-left), always visible as engraving hint
+  ebx.fillStyle='rgba(90,65,50,0.22)';
+  ebx.fillText(ch, px-0.8, EDGE_H*0.5-0.9);
+  px+=cw;
+}
 
-  const seq=SEQUENCE;
-  const charW=EW/seq.length * 0.98;  // approximate char spacing
-  let x=0;
-  // Tile the sequence across full 4096px width
-  const fullText=(seq).repeat(Math.ceil(EW/(seq.length*charW*0.72))+1);
-  let cx=8;
-  for(let ci=0;ci<fullText.length && cx<EW+40;ci++){
-    const ch=fullText[ci];
-    // Carve shadow — dark outer edge of groove
-    ex.fillStyle='rgba(0,0,0,0.75)';
-    ex.fillText(ch, cx+1.5, EH*0.5+1.5);
-    // Groove depth — very dark fill
-    ex.fillStyle='rgba(4,1,0,0.9)';
-    ex.fillText(ch, cx, EH*0.5);
-    // Highlight catch — light grazing the raised edge
-    ex.fillStyle='rgba(200,180,160,0.20)';
-    ex.fillText(ch, cx-0.8, EH*0.5-0.8);
-    // Phi color pulse — faint rose-gold inner glow (static bake, animation handled separately)
-    ex.fillStyle='rgba(183,110,100,0.28)';
-    ex.fillText(ch, cx, EH*0.5);
+// Build the animated edge canvas (spotlight layer drawn on top each frame)
+const edgeLiveCanvas=document.createElement('canvas');
+edgeLiveCanvas.width=EDGE_W; edgeLiveCanvas.height=EDGE_H;
+const elx=edgeLiveCanvas.getContext('2d');
+const edgeTex=new THREE.CanvasTexture(edgeLiveCanvas);
+edgeTex.colorSpace=THREE.SRGBColorSpace;
+edgeTex.needsUpdate=true;
 
-    const metrics=ex.measureText(ch);
-    cx+=metrics.width*0.88;
-  }
-  ex.restore();
-
-  const t=new THREE.CanvasTexture(ec);
-  t.colorSpace=THREE.SRGBColorSpace;
-  t.needsUpdate=true;
-  return t;
-})();
-
-// Apply edge texture to a dedicated thin cylinder matching table edge
+// Mesh
 const edgeBand=new THREE.Mesh(
-  new THREE.CylinderGeometry(4.502,4.502,0.41,128,1,true),  // open-ended = side face only
-  new THREE.MeshStandardMaterial({
-    map:edgeBandTex,
-    roughness:0.22,
-    metalness:0.04,
+  new THREE.CylinderGeometry(4.503,4.503,0.40,256,1,true),
+  new THREE.MeshBasicMaterial({
+    map:edgeTex,
     side:THREE.DoubleSide,
+    transparent:false,
     toneMapped:false
   })
 );
 edgeBand.position.y=TABLE_Y; scene.add(edgeBand);
+
+// Track total sequence width for spotlight loop
+const edgeTotalTileW=(()=>{let w=0; SEQUENCE.split('').forEach(d=>{
+  ebx.font=`bold ${EDGE_H*0.52}px Georgia,serif`;
+  w+=ebx.measureText(d).width*0.92; }); return w;})();
+
+// Spotlight state
+let edgeSpotX=0; // 0..EDGE_W, wraps
+const SPOT_SPEED=EDGE_W/18; // full lap in ~18 seconds
+const SPOT_RADIUS=EDGE_W*0.045; // how wide the gold glow is
+
+function drawEdgeBand(t,delta){
+  // Advance spotlight
+  edgeSpotX=(edgeSpotX+SPOT_SPEED*delta)%EDGE_W;
+
+  // Composite: base static texture first
+  elx.clearRect(0,0,EDGE_W,EDGE_H);
+  elx.drawImage(edgeBaseCanvas,0,0);
+
+  // Gold-white spotlight — radial gradient sweeping horizontally
+  // Draw twice to handle wrap-around
+  [-EDGE_W,0,EDGE_W].forEach(offset=>{
+    const sx=edgeSpotX+offset;
+    const sg=elx.createRadialGradient(sx,EDGE_H/2,0,sx,EDGE_H/2,SPOT_RADIUS);
+    sg.addColorStop(0,'rgba(255,248,200,0.95)');   // bright gold-white core
+    sg.addColorStop(0.15,'rgba(240,210,130,0.75)'); // warm gold mid
+    sg.addColorStop(0.40,'rgba(200,160,80,0.40)');  // amber fade
+    sg.addColorStop(0.70,'rgba(150,100,40,0.15)');  // dim outer
+    sg.addColorStop(1,'rgba(0,0,0,0)');
+    // Only illuminate the text band (not the border grooves)
+    elx.save();
+    elx.globalCompositeOperation='lighter';
+    elx.fillStyle=sg;
+    elx.fillRect(sx-SPOT_RADIUS,EDGE_H*0.12,SPOT_RADIUS*2,EDGE_H*0.76);
+    elx.restore();
+  });
+
+  edgeTex.needsUpdate=true;
+}
 
 // ── Top edge bevel ring — thin beveled lip ────────────────────────────────────
 const bevelMat=new THREE.MeshStandardMaterial({color:0x3a1008,roughness:0.12,metalness:0.06});
@@ -1573,20 +1611,14 @@ const clock=new THREE.Clock();
 let lastColorUpdate=-1;
 renderer.setAnimationLoop(()=>{
   if(window._nitroBialUpdate) window._nitroBialUpdate();
-  const t=clock.getElapsedTime();
+  const t=clock.getElapsedTime(); const delta=clock.getDelta?clock.getDelta():0.016;
   // camera orbit
   const cx=Math.sin(rotY)*zoom*Math.cos(rotX);
   const cz=Math.cos(rotY)*zoom*Math.cos(rotX);
   const cy=zoom*Math.sin(-rotX)+1.5;
   camera.position.set(cx,cy,cz); camera.lookAt(0,1.5,0);
   drawFOL(t); drawKG(t);
-  // Edge sequence phi glow pulse
-  if(edgeBand && edgeBand.material){
-    const{r,g,b}=getColor(t);
-    edgeBand.material.emissive=new THREE.Color(r/255*0.05,g/255*0.05,b/255*0.05);
-    edgeBand.material.emissiveIntensity=0.35+0.15*Math.sin(t*0.7);
-    edgeBand.material.needsUpdate=true;
-  }
+  drawEdgeBand(t,delta);
   // color update — throttled to 20fps
   if(t-lastColorUpdate>0.05){
     lastColorUpdate=t;

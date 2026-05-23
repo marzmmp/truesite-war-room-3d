@@ -975,46 +975,138 @@ LW_TOPS.forEach(({tex,z})=>{
 // Bottom: one wide map screen (left wall, lower half)
 addScreen(mapTexData, 13,4.2, -RW/2+0.12, FY+RH*0.3, 0, Math.PI/2);
 
-// ─── ROUND TABLE ──────────────────────────────────────────────────────────────
+// ─── ROUND TABLE — Cherry Oak Executive ───────────────────────────────────────
 const TABLE_Y=0;
-const tableSurface=mkTex(1024,1024,(ctx,W,H)=>{
-  const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,512);
-  g.addColorStop(0,'#1e1008'); g.addColorStop(0.65,'#140e05'); g.addColorStop(1,'#090503');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  for(let r=28;r<512;r+=20){
-    ctx.beginPath(); ctx.arc(512,512,r,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(183,110,121,${0.018+0.01*Math.sin(r*0.28)})`; ctx.lineWidth=1; ctx.stroke();
+
+// ── Cherry oak grain surface texture ─────────────────────────────────────────
+const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
+  // Base cherry oak — rich warm red-brown
+  const base=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.72);
+  base.addColorStop(0,'#5a1f10');
+  base.addColorStop(0.3,'#4a180d');
+  base.addColorStop(0.65,'#3d1209');
+  base.addColorStop(1,'#2a0c06');
+  ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
+
+  // Grain lines — radial wood pattern (like a real round table cut)
+  ctx.save();
+  ctx.translate(W/2,H/2);
+  for(let a=0;a<Math.PI*2;a+=0.018){
+    const len=W*0.52+Math.random()*W*0.06;
+    const alpha=(0.06+Math.random()*0.09).toFixed(3);
+    const warm=Math.random()>0.5;
+    ctx.strokeStyle=warm?`rgba(90,28,10,${alpha})`:`rgba(30,8,3,${alpha})`;
+    ctx.lineWidth=0.6+Math.random()*1.2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len);
+    ctx.stroke();
   }
-  // static FOL center
-  ctx.strokeStyle='rgba(183,110,121,0.22)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.arc(512,512,55,0,Math.PI*2); ctx.stroke();
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.arc(512+Math.cos(a)*55,512+Math.sin(a)*55,55,0,Math.PI*2);ctx.stroke();}
+  ctx.restore();
+
+  // Annual ring lines — concentric, slightly irregular
+  for(let r=18;r<W*0.52;r+=14+Math.random()*8){
+    const alpha=(0.04+Math.random()*0.07).toFixed(3);
+    ctx.beginPath();
+    ctx.arc(W/2,H/2,r,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(20,5,2,${alpha})`;
+    ctx.lineWidth=0.8+Math.random()*1.4;
+    ctx.stroke();
+  }
+
+  // Lacquer sheen — high gloss coat layer
+  const sheen=ctx.createRadialGradient(W*0.38,H*0.32,0,W/2,H/2,W*0.62);
+  sheen.addColorStop(0,'rgba(255,200,160,0.18)');
+  sheen.addColorStop(0.35,'rgba(220,140,100,0.08)');
+  sheen.addColorStop(0.8,'rgba(180,80,40,0.04)');
+  sheen.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sheen; ctx.fillRect(0,0,W,H);
+
+  // Edge darkening — natural shadow at rim
+  const edge=ctx.createRadialGradient(W/2,H/2,W*0.38,W/2,H/2,W*0.54);
+  edge.addColorStop(0,'rgba(0,0,0,0)');
+  edge.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle=edge; ctx.fillRect(0,0,W,H);
 });
-const lmat=darkMat(0x0c0404);
-// table top
-const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.22,80),new THREE.MeshStandardMaterial({map:tableSurface,roughness:0.35,metalness:0.28,color:0x1e1008}));
-tTop.position.y=TABLE_Y; tTop.receiveShadow=true; scene.add(tTop);
-// rim
-const tRim=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.08,16,100),rgMat(0.6));
-tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.11; scene.add(tRim);
-// pedestal
-const tPed=new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.55,1.55,22),lmat.clone());
-tPed.position.y=TABLE_Y-0.885; tPed.castShadow=true; scene.add(tPed);
-// base disc
-const tBase=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,0.1,32),lmat.clone());
-tBase.position.y=TABLE_Y-1.67; scene.add(tBase);
-// legs
-[[-3.2,-3.2],[3.2,-3.2],[-3.2,3.2],[3.2,3.2]].forEach(([lx,lz])=>{
-  const lg=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.09,1.55,10),lmat.clone());
-  lg.position.set(lx,TABLE_Y-0.885,lz); lg.castShadow=true; scene.add(lg);
-  const ft=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.07,10),lmat.clone());
-  ft.position.set(lx,TABLE_Y-1.67,lz); scene.add(ft);
+
+// ── Cherry oak material ───────────────────────────────────────────────────────
+const cherryOak=new THREE.MeshStandardMaterial({
+  map:tableSurface,
+  roughness:0.18,       // lacquered — very low roughness
+  metalness:0.04,
+  color:0xffffff        // let texture drive color fully
 });
-// cross stretcher
+
+// ── Table top — thick slab (0.42 units = ~4 inches) ─────────────────────────
+const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.42,128),cherryOak);
+tTop.position.y=TABLE_Y; tTop.receiveShadow=true; tTop.castShadow=true; scene.add(tTop);
+
+// ── Top edge bevel ring — thin beveled lip ────────────────────────────────────
+const bevelMat=new THREE.MeshStandardMaterial({color:0x3a1008,roughness:0.12,metalness:0.06});
+const tBevel=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.055,14,120),bevelMat);
+tBevel.rotation.x=Math.PI/2; tBevel.position.y=TABLE_Y+0.21; scene.add(tBevel);
+const tBevelB=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.04,10,120),bevelMat);
+tBevelB.rotation.x=Math.PI/2; tBevelB.position.y=TABLE_Y-0.21; scene.add(tBevelB);
+
+// ── Rose-gold inlay rim ───────────────────────────────────────────────────────
+const tRim=new THREE.Mesh(new THREE.TorusGeometry(4.42,0.038,12,120),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.12}));
+tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.19; scene.add(tRim);
+
+// ── Central pedestal column — turned cherry oak ───────────────────────────────
+// Profile: wider at top & bottom, narrow waist — classic turned leg look
+const pedMat=new THREE.MeshStandardMaterial({color:0x3d1209,roughness:0.22,metalness:0.02});
+// Top cap
+const tPedCapT=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.62,0.12,32),pedMat.clone());
+tPedCapT.position.y=TABLE_Y-0.27; scene.add(tPedCapT);
+// Upper taper
+const tPedU=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.38,0.55,32),pedMat.clone());
+tPedU.position.y=TABLE_Y-0.66; scene.add(tPedU);
+// Waist ring (decorative turned detail)
+const tWaist=new THREE.Mesh(new THREE.TorusGeometry(0.42,0.055,12,40),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.92}));
+tWaist.rotation.x=Math.PI/2; tWaist.position.y=TABLE_Y-0.92; scene.add(tWaist);
+// Lower taper
+const tPedL=new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.58,0.55,32),pedMat.clone());
+tPedL.position.y=TABLE_Y-1.20; scene.add(tPedL);
+// Bottom cap
+const tPedCapB=new THREE.Mesh(new THREE.CylinderGeometry(0.68,0.72,0.14,32),pedMat.clone());
+tPedCapB.position.y=TABLE_Y-1.52; scene.add(tPedCapB);
+
+// ── Four curved legs — sabre/queen anne style ─────────────────────────────────
+// Each leg: starts at pedestal base, curves outward and down
+const legAngles=[Math.PI/4, Math.PI*3/4, Math.PI*5/4, Math.PI*7/4];
+legAngles.forEach(ang=>{
+  const lx=Math.cos(ang), lz=Math.sin(ang);
+  // Upper leg section — angled outward from pedestal
+  const legU=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.08,0.70,16),pedMat.clone());
+  legU.position.set(lx*0.85,TABLE_Y-1.72,lz*0.85);
+  legU.rotation.z= Math.cos(ang)*0.32;
+  legU.rotation.x=-Math.sin(ang)*0.32;
+  legU.castShadow=true; scene.add(legU);
+  // Lower leg section — more outward splay
+  const legL=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.055,0.65,16),pedMat.clone());
+  legL.position.set(lx*1.45,TABLE_Y-2.08,lz*1.45);
+  legL.rotation.z= Math.cos(ang)*0.52;
+  legL.rotation.x=-Math.sin(ang)*0.52;
+  legL.castShadow=true; scene.add(legL);
+  // Foot pad — brass/gold cap
+  const foot=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.12,0.07,16),
+    new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.08,metalness:0.90}));
+  foot.position.set(lx*1.9,TABLE_Y-2.38,lz*1.9); scene.add(foot);
+});
+
+// ── Cross stretcher — H-brace at mid-height ───────────────────────────────────
 ['x','z'].forEach(ax=>{
-  const s=new THREE.Mesh(new THREE.BoxGeometry(ax==='x'?6.4:0.12,0.09,ax==='x'?0.12:6.4),lmat.clone());
-  s.position.y=TABLE_Y-1.32; scene.add(s);
+  const s=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.055,0.055,ax==='x'?3.2:3.2,12),
+    pedMat.clone()
+  );
+  if(ax==='x') s.rotation.z=Math.PI/2; else s.rotation.x=Math.PI/2;
+  s.position.y=TABLE_Y-2.02; scene.add(s);
+  // Center medallion on stretcher
 });
+const stretcherHub=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.92}));
+stretcherHub.position.y=TABLE_Y-2.02; scene.add(stretcherHub);
 
 // FOL animated overlay on table
 const folCanvas=mkCanvas(512,512);

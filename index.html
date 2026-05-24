@@ -1215,10 +1215,107 @@ tBevel.rotation.x=Math.PI/2; tBevel.position.y=TABLE_Y+0.21; scene.add(tBevel);
 const tBevelB=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.04,10,120),bevelMat);
 tBevelB.rotation.x=Math.PI/2; tBevelB.position.y=TABLE_Y-0.21; scene.add(tBevelB);
 
-// ── Rose-gold inlay rim ───────────────────────────────────────────────────────
-const tRim=new THREE.Mesh(new THREE.TorusGeometry(4.42,0.038,12,120),
-  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.12}));
-tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.19; scene.add(tRim);
+// ── Top bevel rim — Hebrew engraved scripture Acts 4:12 ──────────────────────
+// The scripture wraps the entire cherry-red torus bevel at the top edge
+// וְאֵין הַיְשׁוּעָה בְּאַחֵר כִּי לֹא נִתַּן תַּחַת הַשָּׁמַיִם שֵׁם אַחֵר לִבְנֵי אָדָם אֲשֶׁר־בּוֹ נִוָּשֵׁעַ
+const SCRIPTURE_HEB='וְאֵין הַיְשׁוּעָה בְּאַחֵר כִּי לֹא נִתַּן תַּחַת הַשָּׁמַיִם שֵׁם אַחֵר לִבְנֵי אָדָם אֲשֶׁר־בּוֹ נִוָּשֵׁעַ ✦ ';
+
+// Build the bevel texture — wraps around the torus circumference
+const rimTex=(()=>{
+  const RW=4096, RH=96;
+  const rc=document.createElement('canvas'); rc.width=RW; rc.height=RH;
+  const rx=rc.getContext('2d');
+
+  // Cherry-red base — warm deep red matching the bevel torus
+  const bg=rx.createLinearGradient(0,0,0,RH);
+  bg.addColorStop(0,'#3a0c08');
+  bg.addColorStop(0.3,'#4a1008');
+  bg.addColorStop(0.5,'#3d0e07');
+  bg.addColorStop(0.8,'#300b06');
+  bg.addColorStop(1,'#220807');
+  rx.fillStyle=bg; rx.fillRect(0,0,RW,RH);
+
+  // Subtle wood grain — faint horizontal lines
+  for(let i=0;i<40;i++){
+    const y=Math.random()*RH;
+    rx.beginPath(); rx.moveTo(0,y); rx.lineTo(RW,y+(Math.random()-0.5)*4);
+    rx.strokeStyle=`rgba(20,5,2,${(0.03+Math.random()*0.05).toFixed(3)})`;
+    rx.lineWidth=0.5+Math.random()*0.8; rx.stroke();
+  }
+
+  // Carved border lines — top and bottom of the bevel strip
+  [RH*0.06, RH*0.94].forEach(gy=>{
+    rx.beginPath(); rx.moveTo(0,gy); rx.lineTo(RW,gy);
+    rx.strokeStyle='rgba(0,0,0,0.70)'; rx.lineWidth=2.5; rx.stroke();
+    rx.beginPath(); rx.moveTo(0,gy+1.5); rx.lineTo(RW,gy+1.5);
+    rx.strokeStyle='rgba(255,200,160,0.12)'; rx.lineWidth=1; rx.stroke();
+  });
+
+  // Hebrew text — tile across full circumference
+  // Hebrew is RTL — canvas drawText handles it natively with correct Unicode
+  const FONT_SIZE=Math.round(RH*0.44);
+  rx.font=`${FONT_SIZE}px 'Times New Roman',serif`;
+  rx.textBaseline='middle';
+  rx.direction='rtl'; // Hebrew flows right to left
+
+  // Measure one tile width
+  const tileW=rx.measureText(SCRIPTURE_HEB).width;
+  const numTiles=Math.ceil(RW/tileW)+2;
+  const fullText=SCRIPTURE_HEB.repeat(numTiles);
+
+  // Draw right-to-left across the canvas
+  // We'll use LTR positioning but RTL text via direction='rtl'
+  // Actually simpler: just tile LTR with Hebrew characters — they display correctly
+  rx.direction='ltr';
+  rx.font=`${FONT_SIZE}px 'Times New Roman',serif`;
+
+  let tx=8;
+  const chars=[...fullText]; // spread handles unicode properly
+  for(let ci=0;ci<chars.length && tx<RW+60;ci++){
+    const ch=chars[ci];
+    const cw=rx.measureText(ch).width;
+
+    // Layer 1: deep shadow offset — carved depth
+    rx.fillStyle='rgba(0,0,0,0.85)';
+    rx.fillText(ch, tx+1.4, RH*0.5+1.6);
+    // Layer 2: very dark base — the groove floor
+    rx.fillStyle='rgba(10,2,1,0.95)';
+    rx.fillText(ch, tx, RH*0.5);
+    // Layer 3: upper highlight catch — light grazing the groove edge
+    rx.fillStyle='rgba(180,130,100,0.20)';
+    rx.fillText(ch, tx-0.6, RH*0.5-0.7);
+    // Layer 4: faint rose-gold inner glow — the cherry wood bleeding through
+    rx.fillStyle='rgba(160,90,70,0.18)';
+    rx.fillText(ch, tx, RH*0.5);
+
+    tx+=cw*0.88;
+  }
+
+  const t=new THREE.CanvasTexture(rc);
+  t.colorSpace=THREE.SRGBColorSpace;
+  t.needsUpdate=true;
+  return t;
+})();
+
+// Torus for the top bevel — using the engraved scripture texture
+const tRim=new THREE.Mesh(
+  new THREE.TorusGeometry(4.48, 0.075, 20, 200),
+  new THREE.MeshStandardMaterial({
+    map:rimTex,
+    roughness:0.28,
+    metalness:0.08,
+    color:0xffffff,   // let texture drive the cherry red
+    toneMapped:false
+  })
+);
+tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.20; scene.add(tRim);
+
+// Thin rose-gold accent line just above the scripture bevel
+const tRimAccent=new THREE.Mesh(
+  new THREE.TorusGeometry(4.50, 0.018, 10, 160),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.15})
+);
+tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.212; scene.add(tRimAccent);
 
 // ── Central pedestal column — turned cherry oak ───────────────────────────────
 // Profile: wider at top & bottom, narrow waist — classic turned leg look

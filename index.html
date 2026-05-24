@@ -1286,33 +1286,25 @@ const rimTex=(()=>{
   return t;
 })();
 
-// Scripture band — custom cylinder strip so UVs wrap cleanly around circumference
-// A thin open-ended cylinder sitting at the TOP edge of the table, 
-// tube is wide enough to read from above-angle camera
-// radius=4.48 (just outside table edge 4.5), height=0.30 (tall enough to read)
+// Torus — thicker tube so the scripture band is actually visible from camera
 const tRim=new THREE.Mesh(
-  new THREE.CylinderGeometry(4.50, 4.50, 0.32, 256, 1, true),
+  new THREE.TorusGeometry(4.46, 0.18, 32, 256),
   new THREE.MeshStandardMaterial({
     map:rimTex,
-    roughness:0.30,
+    roughness:0.35,
     metalness:0.05,
     color:0xffffff,
-    side:THREE.DoubleSide,
     toneMapped:false
   })
 );
-// Position so the TOP of this cylinder aligns with the table top surface
-// TABLE_Y is center of table slab (height 0.42), so top face = TABLE_Y+0.21
-// We want cylinder top = table top, so center = TABLE_Y+0.21 - 0.16 = TABLE_Y+0.05
-tRim.position.y=TABLE_Y+0.07;
-scene.add(tRim);
+tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.20; scene.add(tRim);
 
-// Rose-gold accent ring sitting right at the top lip
+// Thin rose-gold accent line above the scripture band
 const tRimAccent=new THREE.Mesh(
-  new THREE.TorusGeometry(4.50, 0.020, 10, 160),
-  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.22})
+  new THREE.TorusGeometry(4.50, 0.022, 10, 160),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.20})
 );
-tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.215; scene.add(tRimAccent);
+tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.22; scene.add(tRimAccent);
 
 // ── Central pedestal column — turned cherry oak ───────────────────────────────
 // Profile: wider at top & bottom, narrow waist — classic turned leg look

@@ -1509,234 +1509,195 @@ MEMBERS.forEach((m,i)=>{
   grp.position.set(sx,TABLE_Y,sz);
   grp.rotation.y=rad+Math.PI;
   grp.userData={member:m, ph:i*0.72};
-  // ── HIGH-BACK EXECUTIVE LEATHER CHAIR ────────────────────────────────────────
-  // Deep black top-grain leather + brushed rose-gold hardware
-  const LEATHER = new THREE.MeshStandardMaterial({
-    color:0x100808, roughness:0.62, metalness:0.04, envMapIntensity:1.4
+  // ── THRONE CHAIR — cherry oak frame matching the round table ─────────────────
+  // Same material language as the table: cherry oak wood + obsidian cushion + rose-gold trim
+
+  const OAK = new THREE.MeshStandardMaterial({
+    color:0x5C1F0A, roughness:0.55, metalness:0.06   // cherry oak — matches table
   });
-  const LEATHER_DARK = new THREE.MeshStandardMaterial({
-    color:0x080404, roughness:0.70, metalness:0.02
+  const OAK_DARK = new THREE.MeshStandardMaterial({
+    color:0x3D1206, roughness:0.60, metalness:0.04   // darker grain
   });
-  const CHROME = new THREE.MeshStandardMaterial({
-    color:0xC09070, roughness:0.08, metalness:0.98  // rose-gold hardware
+  const CUSHION = new THREE.MeshStandardMaterial({
+    color:0x080606, roughness:0.68, metalness:0.02   // near-black leather cushion
   });
-  const CHROME_DARK = new THREE.MeshStandardMaterial({
-    color:0x8a6050, roughness:0.14, metalness:0.92
+  const RGOLD = new THREE.MeshStandardMaterial({
+    color:0xC89278, roughness:0.08, metalness:0.96   // rose-gold trim — exact table match
   });
 
-  // ── SEAT CUSHION — deep, wide, slightly raised at center ─────────────────
-  const seatGeo = new THREE.CylinderGeometry(0.44, 0.40, 0.14, 40, 2);
-  const sPos = seatGeo.attributes.position;
-  for(let vi=0;vi<sPos.count;vi++){
-    const y=sPos.getY(vi);
-    const r=Math.sqrt(sPos.getX(vi)**2+sPos.getZ(vi)**2);
-    if(y>0.04) sPos.setY(vi, y + 0.05*(1-(r/0.45)**2));
-  }
-  seatGeo.computeVertexNormals();
-  const seat = new THREE.Mesh(seatGeo, LEATHER.clone());
-  seat.position.set(0, 0.07, 0.02); seat.castShadow=true; grp.add(seat);
-
-  // Seat front lip roll — leather wraps under the front
-  const seatLip = new THREE.Mesh(
-    new THREE.TorusGeometry(0.42, 0.04, 14, 40, Math.PI),
-    LEATHER.clone()
+  // ── SEAT FRAME — solid cherry oak platform ────────────────────────────────
+  // Main seat box — thick solid wood base
+  const seatFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.82, 0.10, 0.80),
+    OAK.clone()
   );
-  seatLip.rotation.x = Math.PI/2; seatLip.rotation.z = Math.PI;
-  seatLip.position.set(0, 0.04, 0.40); grp.add(seatLip);
+  seatFrame.position.set(0, 0.05, 0); seatFrame.castShadow=true; grp.add(seatFrame);
 
-  // Seat side bolsters — raised edges left & right
-  [-0.38, 0.38].forEach(bx=>{
-    const bolster = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.05, 0.55, 8, 16),
-      LEATHER_DARK.clone()
+  // Seat frame front & side rails — slightly proud of the box
+  [[0, 0.05, 0.41, 0.82, 0.06, 0.04],   // front rail
+   [0, 0.05,-0.41, 0.82, 0.06, 0.04],   // back rail
+   [0.42, 0.05, 0, 0.04, 0.06, 0.80],   // right rail
+   [-0.42, 0.05, 0, 0.04, 0.06, 0.80]   // left rail
+  ].forEach(([x,y,z,w,h,d])=>{
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), OAK_DARK.clone());
+    rail.position.set(x,y,z); grp.add(rail);
+  });
+
+  // Rose-gold inlay strip along seat perimeter (matches table rim)
+  const seatInlay = new THREE.Mesh(
+    new THREE.TorusGeometry(0.44, 0.012, 8, 60, Math.PI*2),
+    RGOLD.clone()
+  );
+  seatInlay.rotation.x = Math.PI/2;
+  seatInlay.position.set(0, 0.102, 0); grp.add(seatInlay);
+
+  // ── SEAT CUSHION — padded obsidian leather insert ─────────────────────────
+  const seatCush = new THREE.Mesh(
+    new THREE.BoxGeometry(0.70, 0.08, 0.68),
+    CUSHION.clone()
+  );
+  seatCush.position.set(0, 0.12, 0.02); seatCush.castShadow=true; grp.add(seatCush);
+  // Cushion corner rounds
+  [[0.35,0.30],[0.35,-0.30],[-0.35,0.30],[-0.35,-0.30]].forEach(([cx,cz])=>{
+    const cr = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.08,16), CUSHION.clone());
+    cr.position.set(cx, 0.12, cz); grp.add(cr);
+  });
+
+  // ── FOUR CORNER LEGS — turned cherry oak pillars ──────────────────────────
+  // Matches the pedestal column language of the table
+  const LEG_POSITIONS = [
+    [ 0.36, 0.32],[-0.36, 0.32],
+    [ 0.36,-0.32],[-0.36,-0.32]
+  ];
+  LEG_POSITIONS.forEach(([lx,lz])=>{
+    // Main turned leg shaft
+    const leg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.070, 0.75, 20),
+      OAK.clone()
     );
-    bolster.rotation.z = Math.PI/2;
-    bolster.scale.set(1, 0.45, 0.80);
-    bolster.position.set(bx, 0.16, -0.02); grp.add(bolster);
-  });
+    leg.position.set(lx, -0.375, lz); leg.castShadow=true; grp.add(leg);
 
-  // ── BACKREST — tall high-back with sculpted wings ─────────────────────────
-  // Main back panel — tall, slightly curved forward at top
-  const BACK_H = 1.30; // tall executive height
-  const backMain = new THREE.Mesh(
-    new THREE.BoxGeometry(0.78, BACK_H, 0.12),
-    LEATHER.clone()
-  );
-  backMain.position.set(0, 0.62 + BACK_H/2 - 0.20, -0.39);
-  backMain.castShadow=true; grp.add(backMain);
-
-  // Back front face slight curve — padding layer sits in front of slab
-  const backPad = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.90, 0.90, BACK_H, 40, 1, true, -0.45, 0.90),
-    LEATHER.clone()
-  );
-  backPad.rotation.x = Math.PI/2;
-  backPad.position.set(0, 0.62 + BACK_H/2 - 0.20, -0.02);
-  backPad.scale.set(1, BACK_H, 1); grp.add(backPad);
-
-  // Upper wing flares — widen at shoulder height for that executive silhouette
-  [-1, 1].forEach(side=>{
-    const wing = new THREE.Mesh(
-      new THREE.BoxGeometry(0.10, 0.38, 0.11),
-      LEATHER.clone()
-    );
-    wing.position.set(side*0.44, 1.24, -0.39);
-    wing.rotation.z = side * 0.12; // slight outward angle
-    grp.add(wing);
-    // Wing curved outer edge
-    const wingCurve = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.055, 0.055, 0.38, 16),
-      LEATHER_DARK.clone()
-    );
-    wingCurve.position.set(side*0.495, 1.24, -0.39);
-    grp.add(wingCurve);
-  });
-
-  // ── HEADREST CROWN — proud padded block, slightly forward-tilted ──────────
-  const headRest = new THREE.Mesh(
-    new THREE.BoxGeometry(0.52, 0.28, 0.14),
-    LEATHER.clone()
-  );
-  headRest.position.set(0, 1.72, -0.36);
-  headRest.rotation.x = -0.12; // tilts slightly toward occupant
-  headRest.castShadow=true; grp.add(headRest);
-
-  // Headrest top rounded cap
-  const headCap = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.26, 0.26, 0.14, 32, 1, false, 0, Math.PI),
-    LEATHER.clone()
-  );
-  headCap.rotation.z = Math.PI/2;
-  headCap.position.set(0, 1.86, -0.36);
-  headCap.rotation.x = -0.12; grp.add(headCap);
-
-  // Headrest chrome stem
-  const headStem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.018, 0.018, 0.22, 12),
-    CHROME.clone()
-  );
-  headStem.position.set(0, 1.56, -0.38); grp.add(headStem);
-
-  // ── BACK TOP ARCH — rounded crown above headrest ──────────────────────────
-  const backArch = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.39, 0.39, 0.12, 32, 1, false, 0, Math.PI),
-    LEATHER_DARK.clone()
-  );
-  backArch.rotation.z = Math.PI/2;
-  backArch.position.set(0, 1.92, -0.39); grp.add(backArch);
-
-  // ── LUMBAR SUPPORT — pronounced ridge at lower back ───────────────────────
-  const lumbar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.78, 0.78, 0.09, 40, 1, true, -0.50, 1.00),
-    LEATHER_DARK.clone()
-  );
-  lumbar.rotation.x = Math.PI/2;
-  lumbar.scale.set(1, 0.32, 1);
-  lumbar.position.set(0, 0.62, -0.14); grp.add(lumbar);
-
-  // ── QUILTED STITCH LINES — horizontal tuck lines on backrest ─────────────
-  // (thin torus segments at intervals simulate stitched quilting)
-  [0.50, 0.75, 1.00, 1.25, 1.45].forEach(qy=>{
-    const quilt = new THREE.Mesh(
-      new THREE.TorusGeometry(0.005, 0.005, 6, 30),
-      CHROME_DARK.clone()
-    );
-    quilt.rotation.x = Math.PI/2;
-    quilt.scale.set(72, 72, 1);  // wide flat ellipse = horizontal stitch line
-    quilt.position.set(0, qy, -0.33); grp.add(quilt);
-  });
-
-  // ── ROSE-GOLD BACK FRAME SPINE ────────────────────────────────────────────
-  [-0.34, 0.34].forEach(sx=>{
-    const spine = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.020, 0.020, BACK_H + 0.30, 12),
-      CHROME_DARK.clone()
-    );
-    spine.position.set(sx, 0.70, -0.44); grp.add(spine);
-  });
-  // Bottom cross-bar connecting spines
-  const crossBar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.016, 0.016, 0.70, 10),
-    CHROME_DARK.clone()
-  );
-  crossBar.rotation.z = Math.PI/2;
-  crossBar.position.set(0, 0.13, -0.44); grp.add(crossBar);
-
-  // ── ARMRESTS — wide padded leather + rose-gold pillar ────────────────────
-  [-0.46, 0.46].forEach(ax=>{
-    // Rose-gold vertical pillar
-    const pillar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.020, 0.020, 0.28, 12),
-      CHROME.clone()
-    );
-    pillar.position.set(ax, 0.24, -0.04); grp.add(pillar);
-
-    // Wide padded leather arm pad
-    const pad = new THREE.Mesh(
-      new THREE.BoxGeometry(0.115, 0.052, 0.42),
-      LEATHER.clone()
-    );
-    pad.position.set(ax, 0.40, -0.06); pad.castShadow=true; grp.add(pad);
-
-    // Rounded front & back caps
-    [-0.21, 0.21].forEach(rz=>{
-      const cap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.052, 0.052, 0.052, 18),
-        LEATHER.clone()
+    // Turned ring detail at top of leg (matches table pedestal rings)
+    [0.28, 0.10, -0.10].forEach(ry=>{
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.068, 0.012, 8, 20),
+        OAK_DARK.clone()
       );
-      cap.position.set(ax, 0.40, rz); grp.add(cap);
+      ring.rotation.x = Math.PI/2;
+      ring.position.set(lx, -0.375+ry, lz); grp.add(ring);
     });
 
-    // Rose-gold arm rail — thin strip along outer edge
-    const rail = new THREE.Mesh(
-      new THREE.BoxGeometry(0.012, 0.010, 0.44),
-      CHROME.clone()
+    // Rose-gold foot cap
+    const footCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.072, 0.065, 0.028, 20),
+      RGOLD.clone()
     );
-    rail.position.set(ax + (ax>0?0.056:-0.056), 0.390, -0.06); grp.add(rail);
+    footCap.position.set(lx, -0.764, lz); grp.add(footCap);
   });
 
-  // ── PNEUMATIC GAS LIFT COLUMN ─────────────────────────────────────────────
-  const gasLift = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.048, 0.060, 0.55, 20),
-    CHROME.clone()
-  );
-  gasLift.position.set(0, -0.30, 0); grp.add(gasLift);
+  // Cross stretchers — horizontal braces connecting legs (furniture set detail)
+  // Front-back stretchers
+  [[ 0.36, -0.14], [-0.36, -0.14]].forEach(([sx,sz])=>{
+    const str = new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.62,12), OAK_DARK.clone());
+    str.rotation.x = Math.PI/2;
+    str.position.set(sx, -0.52, sz); grp.add(str);
+  });
+  // Left-right stretcher (center H brace)
+  const hBrace = new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.72,12), OAK_DARK.clone());
+  hBrace.rotation.z = Math.PI/2;
+  hBrace.position.set(0, -0.52, -0.14); grp.add(hBrace);
 
-  // Bellows ring at mid-column
-  const bellows = new THREE.Mesh(
-    new THREE.TorusGeometry(0.058, 0.014, 8, 24),
-    CHROME_DARK.clone()
-  );
-  bellows.rotation.x = Math.PI/2;
-  bellows.position.set(0, -0.06, 0); grp.add(bellows);
+  // ── HIGH BACK — tall cherry oak frame with leather panel ──────────────────
+  const BACK_H = 1.22;
 
-  // ── 5-STAR BASE — rose-gold swept arms ───────────────────────────────────
-  for(let si=0;si<5;si++){
-    const ang = (si/5)*Math.PI*2;
-    const armLen = 0.55;
-    // Tapered arm — thicker at hub, tapers to tip
-    const arm = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.018, 0.032, armLen, 12),
-      CHROME_DARK.clone()
+  // Two vertical stiles — the main uprights of the chair back
+  [-0.33, 0.33].forEach(sx=>{
+    const stile = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.046, 0.052, BACK_H + 0.30, 20),
+      OAK.clone()
     );
-    arm.rotation.z = Math.PI/2;
-    arm.rotation.y = ang;
-    arm.position.set(Math.cos(ang)*armLen*0.5, -0.60, Math.sin(ang)*armLen*0.5);
-    grp.add(arm);
-    // Low-profile caster dome
-    const caster = new THREE.Mesh(
-      new THREE.SphereGeometry(0.040, 12, 8, 0, Math.PI*2, 0, Math.PI*0.55),
-      CHROME_DARK.clone()
-    );
-    caster.position.set(Math.cos(ang)*armLen, -0.618, Math.sin(ang)*armLen);
-    grp.add(caster);
-  }
-  // Center hub — polished rose-gold disc
-  const hub = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.072, 0.078, 0.048, 24),
-    CHROME.clone()
+    stile.position.set(sx, 0.10 + (BACK_H+0.30)/2, -0.40);
+    stile.castShadow=true; grp.add(stile);
+
+    // Turned detail rings along stile
+    [0.20, 0.55, 0.90, 1.15].forEach(ry=>{
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.056, 0.010, 8, 20),
+        OAK_DARK.clone()
+      );
+      ring.rotation.x = Math.PI/2;
+      ring.position.set(sx, 0.20 + ry, -0.40); grp.add(ring);
+    });
+  });
+
+  // Top crest rail — the crown of the chair back (arched horizontal bar)
+  const crestRail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.70, 0.09, 0.07),
+    OAK.clone()
   );
-  hub.position.set(0, -0.575, 0); grp.add(hub);
+  crestRail.position.set(0, 0.10 + BACK_H + 0.26, -0.40);
+  crestRail.castShadow=true; grp.add(crestRail);
+
+  // Crest rail rounded top arch
+  const crestArch = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.35, 0.35, 0.07, 32, 1, false, 0, Math.PI),
+    OAK.clone()
+  );
+  crestArch.rotation.z = Math.PI/2;
+  crestArch.position.set(0, 0.10 + BACK_H + 0.305, -0.40); grp.add(crestArch);
+
+  // Rose-gold crest rail inlay
+  const crestInlay = new THREE.Mesh(
+    new THREE.BoxGeometry(0.72, 0.014, 0.014),
+    RGOLD.clone()
+  );
+  crestInlay.position.set(0, 0.10 + BACK_H + 0.222, -0.37); grp.add(crestInlay);
+
+  // Bottom rail — horizontal bar at seat level connecting stiles
+  const bottomRail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.68, 0.07, 0.06),
+    OAK.clone()
+  );
+  bottomRail.position.set(0, 0.22, -0.40); grp.add(bottomRail);
+
+  // ── BACK LEATHER PANEL — inset between stiles ─────────────────────────────
+  const backPanel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.60, BACK_H - 0.08, 0.07),
+    CUSHION.clone()
+  );
+  backPanel.position.set(0, 0.28 + (BACK_H-0.08)/2, -0.38);
+  backPanel.castShadow=true; grp.add(backPanel);
+
+  // ── ARMRESTS — solid cherry oak with rose-gold cap ────────────────────────
+  [-0.42, 0.42].forEach(ax=>{
+    // Arm support post — turned pillar from seat frame
+    const armPost = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.032, 0.038, 0.28, 16),
+      OAK.clone()
+    );
+    armPost.position.set(ax, 0.24, -0.02); grp.add(armPost);
+
+    // Horizontal arm board — flat cherry oak plank
+    const armBoard = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.042, 0.44),
+      OAK.clone()
+    );
+    armBoard.position.set(ax, 0.39, -0.06); armBoard.castShadow=true; grp.add(armBoard);
+
+    // Front arm cap — rounded nose, rose-gold
+    const armCapFront = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.040, 0.040, 0.042, 16),
+      RGOLD.clone()
+    );
+    armCapFront.position.set(ax, 0.39, 0.18); grp.add(armCapFront);
+
+    // Back arm connection to stile
+    const armCapBack = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.028, 0.042, 12),
+      OAK_DARK.clone()
+    );
+    armCapBack.position.set(ax, 0.39, -0.26); grp.add(armCapBack);
+  });
   // globe
   const isPhi=m.isMarz||m.color==='orig';
   const gc1=mkCanvas(768,768), gc2=mkCanvas(768,768);

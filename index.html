@@ -826,20 +826,24 @@ function makeLogoScreen(imgUrl, label, accentCol) {
 }
 
 // ── Video texture maker ───────────────────────────────────────────────────────
+// Global registry — every video texture registers here
+const _allVids = [];
 function makeVideoTex(url) {
   const vid=document.createElement('video');
   vid.src=url; vid.crossOrigin='anonymous';
   vid.loop=true; vid.muted=true; vid.playsInline=true;
   vid.autoplay=true;
-  // Must be triggered after user gesture or autoplay policy — we attempt on load
   const tex=new THREE.VideoTexture(vid);
   tex.colorSpace=THREE.SRGBColorSpace;
-  // Try to play; browsers may block until interaction
+  // Register for global play-all + needsUpdate
+  _allVids.push({vid, tex});
   vid.addEventListener('canplaythrough',()=>{ vid.play().catch(()=>{}); },{once:true});
-  document.addEventListener('click',()=>{ vid.play().catch(()=>{});   _nitroBialVid.play().catch(()=>{});
-},{once:true});
   return tex;
 }
+// Single global click handler — plays ALL registered videos at once
+document.addEventListener('click',()=>{
+  _allVids.forEach(({vid})=>{ vid.play().catch(()=>{}); });
+},{once:true});
 
 // ── Build all 5 left-wall screen textures ─────────────────────────────────────
 const airaTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/b37a34e16_95fd8b016_1769377123464.mp4');
@@ -1876,6 +1880,12 @@ renderer.setAnimationLoop(()=>{
   } else {
     tip.style.opacity='0'; canvas.style.cursor='grab';
   }
+  // Update all video textures every frame so they animate
+  _allVids.forEach(({vid, tex})=>{
+    if(!vid.paused && vid.readyState >= vid.HAVE_CURRENT_DATA){
+      tex.needsUpdate=true;
+    }
+  });
   composer.render();
 });
 </script>

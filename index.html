@@ -728,8 +728,7 @@ const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e
     emissive:0x00e5ff,
     emissiveIntensity:3.5,
     roughness:0.0,
-    metalness:0.0,
-    toneMapped:false
+    metalness:0.0
   });
   const gapD = 0.22; // depth of glow strip (spans the recess)
 
@@ -757,7 +756,7 @@ const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e
   // ── Corner accent dots — 4 corners, small emissive squares
   const cornerMat = new THREE.MeshStandardMaterial({
     color:0xffffff, emissive:0xffffff, emissiveIntensity:6.0,
-    roughness:0.0, metalness:0.0, toneMapped:false
+    roughness:0.0, metalness:0.0
   });
   [[w/2, h/2],[w/2,-h/2],[-w/2,h/2],[-w/2,-h/2]].forEach(([cx,cy])=>{
     const dot = new THREE.Mesh(new THREE.BoxGeometry(GAP*0.6, GAP*0.6, gapD+0.02), cornerMat.clone());
@@ -1460,8 +1459,7 @@ const tRim=new THREE.Mesh(
     map:rimTex,
     roughness:0.35,
     metalness:0.05,
-    color:0xffffff,
-    toneMapped:false
+    color:0xffffff
   })
 );
 tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.20; scene.add(tRim);
@@ -1543,9 +1541,8 @@ const folDisc=new THREE.Mesh(
     transparent:true,
     side:THREE.DoubleSide,
     depthWrite:false,
-    roughness:0.85,     // carved wood — not shiny
-    metalness:0.0,
-    toneMapped:false
+    roughness:0.85,
+    metalness:0.0
   })
 );
 folDisc.rotation.x=-Math.PI/2;

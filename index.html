@@ -675,14 +675,25 @@ const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e
     new THREE.PlaneGeometry(w,h),
     new THREE.MeshBasicMaterial({map:bwVidTex, toneMapped:false})
   );
-  // Front wall faces INTO room: rotation.y=PI, sit 0.07 INSIDE the wall
-  s.rotation.y=Math.PI; s.position.set(px, py, pz-0.07); scene.add(s);
-  // Bezel
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(w+0.22,h+0.22,0.09),darkMat(0x060202));
+  // Front wall — use addScreen for consistent bezel treatment
+  // (called after this IIFE so we use inline version here)
+  s.rotation.y=Math.PI; s.position.set(px, py, pz-0.20); scene.add(s);
+  // Mount plate
+  const bk=new THREE.Mesh(new THREE.BoxGeometry(w+0.36,h+0.36,0.10),new THREE.MeshStandardMaterial({color:0x080505,roughness:0.80,metalness:0.10}));
   bk.rotation.y=Math.PI; bk.position.set(px,py,pz); scene.add(bk);
-  // Rose-gold frame outline
-  const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.5,h+0.5,0.04),darkMat(0x3a1520));
-  fr.rotation.y=Math.PI; fr.position.set(px,py,pz+0.01); scene.add(fr);
+  // Bezel body
+  const bz=new THREE.Mesh(new THREE.BoxGeometry(w+0.36,h+0.36,0.14),new THREE.MeshStandardMaterial({color:0x0a0606,roughness:0.55,metalness:0.25}));
+  bz.rotation.y=Math.PI; bz.position.set(px,py,pz-0.12); scene.add(bz);
+  // Rose-gold top/bottom bars
+  const trimM=new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.08,metalness:0.96});
+  [[py+(h+0.36)/2+0.011],[py-(h+0.36)/2-0.011]].forEach(([ty])=>{
+    const tb=new THREE.Mesh(new THREE.BoxGeometry(w+0.38,0.022,0.16),trimM.clone());
+    tb.rotation.y=Math.PI; tb.position.set(px,ty,pz-0.12); scene.add(tb);
+  });
+  [-(w+0.36)/2-0.011, (w+0.36)/2+0.011].forEach(tx=>{
+    const tb=new THREE.Mesh(new THREE.BoxGeometry(0.022,h+0.36,0.16),trimM.clone());
+    tb.rotation.y=Math.PI; tb.position.set(px+tx,py,pz-0.12); scene.add(tb);
+  });
 })();
 const bwGlow = new THREE.PointLight(0xc87840, 0.3, 8);
 bwGlow.position.set(0, FY+RH*0.52, RD/2-1.5);
@@ -931,22 +942,96 @@ function drawKG(t){
 
 // ─── BEZEL HELPER ─────────────────────────────────────────────────────────────
 function addScreen(tex,w,h,px,py,pz,ry){
-  // Offset direction based on wall orientation so screen sits proud of wall
-  const offX=Math.abs(ry)>0.1?(ry>0?0.06:-0.06):0;
-  const offZ=Math.abs(ry)<0.1?0.06:0;
-  // Screen plane — sits proud
-  const s=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,toneMapped:false}));
-  s.position.set(px+offX,py,pz+offZ); s.rotation.y=ry; scene.add(s);
-  // bezel back — sits behind screen
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(w+0.22,h+0.22,0.09),darkMat(0x060202));
-  bk.position.set(px,py,pz); bk.rotation.y=ry; scene.add(bk);
-  // rose-gold bezel frame — surrounds
-  const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.34,h+0.34,0.06),rgMat(0.4));
-  fr.position.set(px,py,pz); fr.rotation.y=ry; scene.add(fr);
-  // glow
-  const ox=Math.abs(ry)>0.1?(ry>0?1.2:-1.2):0, oz=Math.abs(ry)<0.1?1.2:0;
-  const gl=new THREE.PointLight(0x88aacc,0.7,9);
-  gl.position.set(px+ox,py,pz+oz); scene.add(gl);
+  // Direction vectors — which axis is "out from wall" based on rotation
+  const isLeft  = Math.abs(ry - (-Math.PI/2)) < 0.01;
+  const isRight = Math.abs(ry - ( Math.PI/2)) < 0.01;
+  const isFront = Math.abs(ry - Math.PI) < 0.01;
+  // outward unit vector (away from wall, into the room)
+  const outX = isLeft ? -1 : isRight ? 1 : 0;
+  const outZ = (!isLeft && !isRight && !isFront) ? 1 : isFront ? -1 : 0;
+
+  const MOUNT_D  = 0.10;  // depth of mounting plate flush against wall
+  const BEZEL_D  = 0.14;  // total bezel depth (proud of wall)
+  const SCREEN_D = 0.18;  // screen face (most proud)
+  const BEZ_W    = 0.18;  // bezel border width around screen
+  const BEZ_THIN = 0.12;  // thinner bezel on sides vs top/bottom
+
+  // ── 1. WALL MOUNTING PLATE — recessed flush block ────────────────────────
+  // Sits against the wall, slightly larger than bezel — the anchor plate
+  const mountGeo = new THREE.BoxGeometry(w+BEZ_W*2+0.12, h+BEZ_W*2+0.12, MOUNT_D);
+  const mount = new THREE.Mesh(mountGeo, new THREE.MeshStandardMaterial({
+    color:0x080505, roughness:0.80, metalness:0.10
+  }));
+  mount.position.set(px, py, pz);
+  mount.rotation.y = ry;
+  scene.add(mount);
+
+  // ── 2. BEZEL BODY — the main frame, thick slab proud of the wall ─────────
+  // Full bezel box (screen-sized hole is implied by layering screen on top)
+  const bezGeo = new THREE.BoxGeometry(w+BEZ_W*2, h+BEZ_W*2, BEZEL_D);
+  const bezel = new THREE.Mesh(bezGeo, new THREE.MeshStandardMaterial({
+    color:0x0a0606, roughness:0.55, metalness:0.25
+  }));
+  bezel.position.set(
+    px + outX * (MOUNT_D*0.5 + BEZEL_D*0.5),
+    py,
+    pz + outZ * (MOUNT_D*0.5 + BEZEL_D*0.5)
+  );
+  bezel.rotation.y = ry;
+  scene.add(bezel);
+
+  // ── 3. ROSE-GOLD EDGE TRIM — 4 thin bars framing the bezel ──────────────
+  // Top bar
+  const trimMat = new THREE.MeshStandardMaterial({color:0xC89278, roughness:0.08, metalness:0.96});
+  const trimD = BEZEL_D + 0.02;
+  const trimT = 0.022; // trim thickness
+  const bOut  = outX*(MOUNT_D*0.5 + BEZEL_D*0.5) ;
+  const bOutZ = outZ*(MOUNT_D*0.5 + BEZEL_D*0.5);
+
+  // Top trim bar
+  const tTop = new THREE.Mesh(new THREE.BoxGeometry(w+BEZ_W*2+trimT*2, trimT, trimD), trimMat.clone());
+  tTop.position.set(px+outX*bOut, py+(h+BEZ_W*2)/2+trimT/2, pz+outZ*bOutZ);
+  tTop.rotation.y=ry; scene.add(tTop);
+  // Bottom trim bar
+  const tBot = new THREE.Mesh(new THREE.BoxGeometry(w+BEZ_W*2+trimT*2, trimT, trimD), trimMat.clone());
+  tBot.position.set(px+outX*bOut, py-(h+BEZ_W*2)/2-trimT/2, pz+outZ*bOutZ);
+  tBot.rotation.y=ry; scene.add(tBot);
+  // Left trim bar (in local space — rotated with screen)
+  const tL = new THREE.Mesh(new THREE.BoxGeometry(trimT, h+BEZ_W*2, trimD), trimMat.clone());
+  tL.position.set(px+outX*bOut, py, pz+outZ*bOutZ);
+  // offset left/right in local screen space
+  const localOff = (w+BEZ_W*2)/2 + trimT/2;
+  if(isLeft||isRight){
+    tL.position.z += (isLeft?1:-1)*localOff;
+  } else {
+    tL.position.x -= localOff;
+  }
+  tL.rotation.y=ry; scene.add(tL);
+  // Right trim bar
+  const tR = tL.clone();
+  if(isLeft||isRight){
+    tR.position.z += (isLeft?-1:1)*localOff*2;
+  } else {
+    tR.position.x += localOff*2;
+  }
+  scene.add(tR);
+
+  // ── 4. SCREEN FACE — sits most proud, inside the bezel recess ────────────
+  const scrFaceOff = MOUNT_D*0.5 + BEZEL_D + 0.005;
+  const s = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, h),
+    new THREE.MeshBasicMaterial({map:tex, toneMapped:false})
+  );
+  s.position.set(px + outX*scrFaceOff, py, pz + outZ*scrFaceOff);
+  s.rotation.y = ry;
+  scene.add(s);
+
+  // ── 5. SCREEN AMBIENT GLOW ────────────────────────────────────────────────
+  const glowOff = scrFaceOff + 1.4;
+  const gl = new THREE.PointLight(0x88aacc, 0.65, 9);
+  gl.position.set(px + outX*glowOff, py, pz + outZ*glowOff);
+  scene.add(gl);
+
   return s;
 }
 

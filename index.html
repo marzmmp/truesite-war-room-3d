@@ -1124,27 +1124,20 @@ edgeBand.position.y=TABLE_Y; scene.add(edgeBand);
 let _edgeLastIdx=-1;
 
 function drawEdgeBand(t,dt){
-  // Which character is currently illuminated?
-  const progress=(t%LAP_SECS)/LAP_SECS;           // 0..1 around the lap
-  const activeIdx=Math.floor(progress*TOTAL_CHARS)%TOTAL_CHARS;
-  if(activeIdx===_edgeLastIdx) return;             // no change — skip redraw
-  _edgeLastIdx=activeIdx;
+  // Continuous fractional position — NO floor/snap, moves fluidly
+  const progress=(t%LAP_SECS)/LAP_SECS;   // 0.0 → 1.0 continuously
+  const activePos=progress*TOTAL_CHARS;    // fractional index, e.g. 47.63
+
+  // Throttle redraws to ~30fps max (no need faster for smooth look)
+  if(t-(_edgeLastIdx||0)<0.033) return;
+  _edgeLastIdx=t;
 
   elx.clearRect(0,0,EDGE_W,EDGE_H);
 
-  // ── Pitch-black base ───────────────────────────────────────────────────────
+  // ── Pitch-black base ──────────────────────────────────────────────────────
   elx.fillStyle='#050101'; elx.fillRect(0,0,EDGE_W,EDGE_H);
 
-  // Subtle marble grain
-  elx.save();
-  for(let i=0;i<50;i++){
-    const y=Math.random()*EDGE_H;
-    elx.beginPath(); elx.moveTo(0,y); elx.lineTo(EDGE_W,y+(Math.random()-0.5)*5);
-    elx.strokeStyle=`rgba(28,7,3,0.04)`; elx.lineWidth=0.6; elx.stroke();
-  }
-  elx.restore();
-
-  // Carved border lines top & bottom
+  // Carved border lines top & bottom (static — drawn once per frame, fast)
   [EDGE_H*0.10, EDGE_H*0.90].forEach(gy=>{
     elx.beginPath(); elx.moveTo(0,gy); elx.lineTo(EDGE_W,gy);
     elx.strokeStyle='rgba(0,0,0,0.75)'; elx.lineWidth=3; elx.stroke();
@@ -1152,61 +1145,62 @@ function drawEdgeBand(t,dt){
     elx.strokeStyle='rgba(140,100,70,0.10)'; elx.lineWidth=1; elx.stroke();
   });
 
+  // ── Smooth brightness falloff function ────────────────────────────────────
+  // Uses a cosine bell curve — peaks at dist=0, smoothly falls to 0 at dist=WINDOW
+  const WINDOW=6; // how many chars on each side the glow reaches
+  function brightness(i){
+    // Signed fractional distance from the active position (wrap-aware)
+    let d=i-activePos;
+    // Wrap to shortest path around the circle
+    if(d> TOTAL_CHARS/2) d-=TOTAL_CHARS;
+    if(d<-TOTAL_CHARS/2) d+=TOTAL_CHARS;
+    const absd=Math.abs(d);
+    if(absd>=WINDOW) return 0;
+    // Cosine ease: 1.0 at center → 0.0 at WINDOW
+    return 0.5*(1+Math.cos(Math.PI*absd/WINDOW));
+  }
+
   // ── Draw all characters ────────────────────────────────────────────────────
   elx.font=EDGE_FONT;
   elx.textBaseline='middle';
+  const cy=EDGE_H*0.5;
 
-  // Determine trail: 2 chars before still slightly warm, active=full gold-white
   for(let i=0;i<edgeChars.length;i++){
     const {char,x,w}=edgeChars[i];
-    const cy=EDGE_H*0.5;
+    const b=brightness(i); // 0.0 → 1.0
 
-    // Distance from active index (wrap-aware)
-    let dist=i-activeIdx;
-    if(dist<0) dist+=TOTAL_CHARS;
-
-    if(dist===0){
-      // ── ACTIVE char — bright gold-white illuminated ──────────────────────
-      // Glow halo behind char
-      const halo=elx.createRadialGradient(x+w/2,cy,0,x+w/2,cy,w*1.6);
-      halo.addColorStop(0,'rgba(255,252,200,0.55)');
-      halo.addColorStop(0.4,'rgba(240,210,120,0.25)');
-      halo.addColorStop(1,'rgba(0,0,0,0)');
-      elx.fillStyle=halo;
-      elx.fillRect(x-w*0.8,cy-EDGE_H*0.4,w*2.6,EDGE_H*0.8);
-
-      // Shadow depth (carve)
-      elx.fillStyle='rgba(0,0,0,0.7)';
+    if(b>0.01){
+      // ── Illuminated range ────────────────────────────────────────────────
+      // Halo glow — scales with brightness
+      if(b>0.3){
+        const halo=elx.createRadialGradient(x+w/2,cy,0,x+w/2,cy,w*2.2);
+        halo.addColorStop(0,`rgba(255,248,190,${(b*0.45).toFixed(3)})`);
+        halo.addColorStop(0.4,`rgba(230,190,90,${(b*0.20).toFixed(3)})`);
+        halo.addColorStop(1,'rgba(0,0,0,0)');
+        elx.fillStyle=halo;
+        elx.fillRect(x-w,cy-EDGE_H*0.42,w*3,EDGE_H*0.84);
+      }
+      // Carve shadow (always present for depth)
+      elx.fillStyle=`rgba(0,0,0,0.80)`;
       elx.fillText(char,x+1.5,cy+1.8);
-      // Bright gold-white fill
-      elx.fillStyle='rgba(255,252,210,1.0)';
+      // Gold-white character — brightness drives opacity and warmth
+      const r=Math.round(255);
+      const g=Math.round(200+b*52);   // 200→252 as b→1
+      const bch=Math.round(80+b*130); // 80→210 as b→1
+      elx.fillStyle=`rgba(${r},${g},${bch},${(0.15+b*0.85).toFixed(3)})`;
       elx.fillText(char,x,cy);
-      // White specular top-left edge
-      elx.fillStyle='rgba(255,255,255,0.55)';
-      elx.fillText(char,x-0.7,cy-0.8);
-
-    } else if(dist===1){
-      // One step behind — warm amber trail
-      elx.fillStyle='rgba(0,0,0,0.65)';
-      elx.fillText(char,x+1.5,cy+1.8);
-      elx.fillStyle='rgba(200,150,60,0.65)';
-      elx.fillText(char,x,cy);
-
-    } else if(dist===2){
-      // Two steps behind — faint ember
-      elx.fillStyle='rgba(0,0,0,0.6)';
-      elx.fillText(char,x+1.5,cy+1.8);
-      elx.fillStyle='rgba(130,80,25,0.35)';
-      elx.fillText(char,x,cy);
-
+      // Specular highlight at peak only
+      if(b>0.7){
+        elx.fillStyle=`rgba(255,255,255,${(b*0.4).toFixed(3)})`;
+        elx.fillText(char,x-0.6,cy-0.7);
+      }
     } else {
-      // ── DARK / engraved — nearly invisible, just the carve hint ──────────
+      // ── Dark / engraved — invisible base with faint carved edge ──────────
       elx.fillStyle='rgba(0,0,0,0.80)';
       elx.fillText(char,x+1.4,cy+1.6);
       elx.fillStyle='rgba(6,2,1,0.92)';
       elx.fillText(char,x,cy);
-      // Faint carved highlight so geometry is still readable
-      elx.fillStyle='rgba(75,50,35,0.18)';
+      elx.fillStyle='rgba(70,48,32,0.17)';
       elx.fillText(char,x-0.7,cy-0.8);
     }
   }

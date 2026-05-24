@@ -1210,8 +1210,8 @@ function drawEdgeBand(t,dt){
 
 // ── Top edge bevel ring — thin beveled lip ────────────────────────────────────
 const bevelMat=new THREE.MeshStandardMaterial({color:0x3a1008,roughness:0.12,metalness:0.06});
-const tBevel=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.055,14,120),bevelMat);
-tBevel.rotation.x=Math.PI/2; tBevel.position.y=TABLE_Y+0.21; scene.add(tBevel);
+const tBevel=new THREE.Mesh(new THREE.TorusGeometry(4.52,0.042,14,120),bevelMat);
+tBevel.rotation.x=Math.PI/2; tBevel.position.y=TABLE_Y+0.213; scene.add(tBevel);
 const tBevelB=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.04,10,120),bevelMat);
 tBevelB.rotation.x=Math.PI/2; tBevelB.position.y=TABLE_Y-0.21; scene.add(tBevelB);
 
@@ -1286,25 +1286,39 @@ const rimTex=(()=>{
   return t;
 })();
 
-// Torus — thicker tube so the scripture band is actually visible from camera
+// Scripture ring — flat annulus (ring disc) sitting ON TOP of the table edge
+// This puts the text face-up so it reads from the camera above
+// Inner radius: 4.12 (clears table top), Outer radius: 4.50 (just outside bevel edge)
+const rimRingGeo=new THREE.RingGeometry(4.12, 4.52, 256, 1);
+// RingGeometry UVs go 0→1 around circumference on the outer edge — perfect for text wrap
 const tRim=new THREE.Mesh(
-  new THREE.TorusGeometry(4.46, 0.18, 32, 256),
+  rimRingGeo,
   new THREE.MeshStandardMaterial({
     map:rimTex,
-    roughness:0.35,
+    roughness:0.30,
     metalness:0.05,
     color:0xffffff,
+    side:THREE.DoubleSide,
     toneMapped:false
   })
 );
-tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.20; scene.add(tRim);
+tRim.rotation.x=-Math.PI/2;  // lay flat, face UP
+tRim.position.y=TABLE_Y+0.215; // sit just above the table slab surface
+scene.add(tRim);
 
-// Thin rose-gold accent line above the scripture band
+// Thin rose-gold accent ring on the very outer lip
 const tRimAccent=new THREE.Mesh(
-  new THREE.TorusGeometry(4.50, 0.022, 10, 160),
-  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.20})
+  new THREE.TorusGeometry(4.52, 0.018, 10, 160),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.22})
 );
-tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.22; scene.add(tRimAccent);
+tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.215; scene.add(tRimAccent);
+
+// Inner accent ring — clean inner boundary
+const tRimInner=new THREE.Mesh(
+  new THREE.TorusGeometry(4.12, 0.012, 8, 160),
+  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.15})
+);
+tRimInner.rotation.x=Math.PI/2; tRimInner.position.y=TABLE_Y+0.216; scene.add(tRimInner);
 
 // ── Central pedestal column — turned cherry oak ───────────────────────────────
 // Profile: wider at top & bottom, narrow waist — classic turned leg look

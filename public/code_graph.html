@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrueSite Code Graph — GitNexus Nightly</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #0a0e27;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            background: linear-gradient(135deg, #1a1f3a 0%, #2d2d44 100%);
+            padding: 20px;
+            border-bottom: 1px solid #d4af37;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+        }
+        #header h1 {
+            color: #d4af37;
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        #header p {
+            color: #999;
+            font-size: 0.9em;
+            margin: 4px 0;
+        }
+        #canvas {
+            flex: 1;
+            background: radial-gradient(ellipse at center, #0f1535 0%, #0a0e27 100%);
+        }
+        .node {
+            fill: #d4af37;
+            stroke: #fff;
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .node:hover {
+            fill: #ffed4e;
+            filter: drop-shadow(0 0 8px #d4af37);
+        }
+        .link {
+            stroke: #666;
+            stroke-opacity: 0.3;
+            stroke-width: 1px;
+        }
+        text.label {
+            font-size: 12px;
+            fill: #d4af37;
+            pointer-events: none;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            font-weight: bold;
+        }
+        #tooltip {
+            position: absolute;
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid #d4af37;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 0.85em;
+            color: #e0e0e0;
+            pointer-events: none;
+            max-width: 300px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 8px 16px rgba(212, 175, 55, 0.2);
+        }
+        #info {
+            background: rgba(10, 14, 39, 0.8);
+            padding: 12px 20px;
+            border-top: 1px solid #d4af37;
+            font-size: 0.85em;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <h1>TrueSite Code Graph — GitNexus</h1>
+            <p>Force-directed dependency visualization | 2026-05-26 07:13:38 UTC</p>
+            <p>8 siblings • 749 dependency edges</p>
+        </div>
+        <svg id="canvas"></svg>
+        <div id="info">
+            Hover over nodes to inspect. Drag to reposition. Wheel to zoom. Click to open GitHub repo.
+        </div>
+    </div>
+    <div id="tooltip"></div>
+
+    <script>
+        const graphData = {
+            nodes: [
+                {id: "Yahriel", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahriel"},
+                {id: "Azari", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-azari"},
+                {id: "Yahli-El", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahli-el"},
+                {id: "Yahziel", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahziel"},
+                {id: "Aira", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-aira"},
+                {id: "Jo-Legal", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-jo-legal"},
+                {id: "Yahsei", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahsei"},
+                {id: "Yahbana", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahbana"}
+            ],
+            links: [
+                {source: "Yahriel", target: "Azari", value: 1},
+                {source: "Yahriel", target: "Yahli-El", value: 1},
+                {source: "Yahriel", target: "Yahziel", value: 1},
+                {source: "Yahriel", target: "Aira", value: 1},
+                {source: "Yahriel", target: "Jo-Legal", value: 1},
+                {source: "Yahriel", target: "Yahsei", value: 1},
+                {source: "Yahriel", target: "Yahbana", value: 1},
+                {source: "Azari", target: "Yahli-El", value: 1},
+                {source: "Azari", target: "Yahziel", value: 1},
+                {source: "Azari", target: "Aira", value: 1},
+                {source: "Azari", target: "Jo-Legal", value: 1},
+                {source: "Azari", target: "Yahsei", value: 1},
+                {source: "Azari", target: "Yahbana", value: 1},
+                {source: "Yahli-El", target: "Yahziel", value: 1},
+                {source: "Yahli-El", target: "Aira", value: 1},
+                {source: "Yahli-El", target: "Jo-Legal", value: 1},
+                {source: "Yahli-El", target: "Yahsei", value: 1},
+                {source: "Yahli-El", target: "Yahbana", value: 1},
+                {source: "Yahziel", target: "Aira", value: 1},
+                {source: "Yahziel", target: "Jo-Legal", value: 1},
+                {source: "Yahziel", target: "Yahsei", value: 1},
+                {source: "Yahziel", target: "Yahbana", value: 1},
+                {source: "Aira", target: "Jo-Legal", value: 1},
+                {source: "Aira", target: "Yahsei", value: 1},
+                {source: "Aira", target: "Yahbana", value: 1},
+                {source: "Jo-Legal", target: "Yahsei", value: 1},
+                {source: "Jo-Legal", target: "Yahbana", value: 1},
+                {source: "Yahsei", target: "Yahbana", value: 1}
+            ]
+        };
+
+        const svg = d3.select('#canvas');
+        const container = document.getElementById('container');
+        const width = container.offsetWidth;
+        const height = container.offsetHeight - 60 - 40; // header + info
+
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(120))
+            .force('charge', d3.forceManyBody().strength(-400))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius(45));
+
+        const link = svg.append('g')
+            .selectAll('line')
+            .data(graphData.links)
+            .enter()
+            .append('line')
+            .attr('class', 'link');
+
+        const node = svg.append('g')
+            .selectAll('circle')
+            .data(graphData.nodes)
+            .enter()
+            .append('circle')
+            .attr('class', 'node')
+            .attr('r', 7)
+            .attr('fill', d => d.color)
+            .call(d3.drag()
+                .on('start', dragStart)
+                .on('drag', dragged)
+                .on('end', dragEnd));
+
+        const label = svg.append('g')
+            .selectAll('text')
+            .data(graphData.nodes)
+            .enter()
+            .append('text')
+            .attr('class', 'label')
+            .attr('text-anchor', 'middle')
+            .attr('dy', '0.3em')
+            .text(d => d.id);
+
+        node.on('mouseenter', function(e, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = '<strong>' + d.id + '</strong><br><br><code>' + d.repo + '</code><br><br><small>Click to open on GitHub</small>';
+            tooltip.style.display = 'block';
+            tooltip.style.left = (e.pageX + 10) + 'px';
+            tooltip.style.top = (e.pageY + 10) + 'px';
+            
+            d3.select(this).transition().attr('r', 10);
+        })
+        .on('mouseleave', function() {
+            document.getElementById('tooltip').style.display = 'none';
+            d3.select(this).transition().attr('r', 7);
+        })
+        .on('click', function(e, d) {
+            window.open('https://' + d.repo, '_blank');
+        });
+
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+
+            label
+                .attr('x', d => d.x)
+                .attr('y', d => d.y);
+        });
+
+        function dragStart(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragEnd(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        svg.call(d3.zoom().on('zoom', (event) => {
+            svg.selectAll('g').attr('transform', event.transform);
+        }));
+    </script>
+</body>
+</html>

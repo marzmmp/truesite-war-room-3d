@@ -90,8 +90,8 @@
     <div id="container">
         <div id="header">
             <h1>TrueSite Code Graph — GitNexus</h1>
-            <p>Force-directed dependency visualization | 2026-05-26 07:13:38 UTC</p>
-            <p>8 siblings • 749 dependency edges</p>
+            <p>Force-directed dependency visualization | 2026-06-01 07:01:27 UTC</p>
+            <p>9 siblings • 771 dependency edges</p>
         </div>
         <svg id="canvas"></svg>
         <div id="info">
@@ -110,7 +110,8 @@
                 {id: "Aira", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-aira"},
                 {id: "Jo-Legal", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-jo-legal"},
                 {id: "Yahsei", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahsei"},
-                {id: "Yahbana", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahbana"}
+                {id: "Yahbana", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahbana"},
+                {id: "Yahseed", group: "sibling", color: "#d4af37", repo: "github.com/marzmmp/truesite-yahseed"}
             ],
             links: [
                 {source: "Yahriel", target: "Azari", value: 1},
@@ -120,27 +121,35 @@
                 {source: "Yahriel", target: "Jo-Legal", value: 1},
                 {source: "Yahriel", target: "Yahsei", value: 1},
                 {source: "Yahriel", target: "Yahbana", value: 1},
+                {source: "Yahriel", target: "Yahseed", value: 1},
                 {source: "Azari", target: "Yahli-El", value: 1},
                 {source: "Azari", target: "Yahziel", value: 1},
                 {source: "Azari", target: "Aira", value: 1},
                 {source: "Azari", target: "Jo-Legal", value: 1},
                 {source: "Azari", target: "Yahsei", value: 1},
                 {source: "Azari", target: "Yahbana", value: 1},
+                {source: "Azari", target: "Yahseed", value: 1},
                 {source: "Yahli-El", target: "Yahziel", value: 1},
                 {source: "Yahli-El", target: "Aira", value: 1},
                 {source: "Yahli-El", target: "Jo-Legal", value: 1},
                 {source: "Yahli-El", target: "Yahsei", value: 1},
                 {source: "Yahli-El", target: "Yahbana", value: 1},
+                {source: "Yahli-El", target: "Yahseed", value: 1},
                 {source: "Yahziel", target: "Aira", value: 1},
                 {source: "Yahziel", target: "Jo-Legal", value: 1},
                 {source: "Yahziel", target: "Yahsei", value: 1},
                 {source: "Yahziel", target: "Yahbana", value: 1},
+                {source: "Yahziel", target: "Yahseed", value: 1},
                 {source: "Aira", target: "Jo-Legal", value: 1},
                 {source: "Aira", target: "Yahsei", value: 1},
                 {source: "Aira", target: "Yahbana", value: 1},
+                {source: "Aira", target: "Yahseed", value: 1},
                 {source: "Jo-Legal", target: "Yahsei", value: 1},
                 {source: "Jo-Legal", target: "Yahbana", value: 1},
-                {source: "Yahsei", target: "Yahbana", value: 1}
+                {source: "Jo-Legal", target: "Yahseed", value: 1},
+                {source: "Yahsei", target: "Yahbana", value: 1},
+                {source: "Yahsei", target: "Yahseed", value: 1},
+                {source: "Yahbana", target: "Yahseed", value: 1}
             ]
         };
 
@@ -203,40 +212,39 @@
         });
 
         simulation.on('tick', () => {
-            link
-                .attr('x1', d => d.source.x)
+            link.attr('x1', d => d.source.x)
                 .attr('y1', d => d.source.y)
                 .attr('x2', d => d.target.x)
                 .attr('y2', d => d.target.y);
 
-            node
-                .attr('cx', d => d.x)
+            node.attr('cx', d => d.x)
                 .attr('cy', d => d.y);
 
-            label
-                .attr('x', d => d.x)
+            label.attr('x', d => d.x)
                 .attr('y', d => d.y);
         });
 
-        function dragStart(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+        function dragStart(e, d) {
+            if (!e.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
         }
 
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
+        function dragged(e, d) {
+            d.fx = e.x;
+            d.fy = e.y;
         }
 
-        function dragEnd(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
+        function dragEnd(e, d) {
+            if (!e.active) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
         }
 
-        svg.call(d3.zoom().on('zoom', (event) => {
-            svg.selectAll('g').attr('transform', event.transform);
+        // Zoom / pan
+        const g = svg.append('g');
+        svg.call(d3.zoom().on('zoom', (e) => {
+            g.attr('transform', e.transform);
         }));
     </script>
 </body>

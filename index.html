@@ -398,7 +398,7 @@ function addBox(w,h,d,mat,px,py,pz,ry=0){
 }
 
 // Floor & ceiling
-const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.92,metalness:0.0,envMapIntensity:0.0,emissive:new THREE.Color(0,0,0),emissiveIntensity:0.0}));
+const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshBasicMaterial({map:makeFloorTex()}));
 floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,FY,0); floorMesh.receiveShadow=true; scene.add(floorMesh);
 const ceilMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeCeilTex(),roughness:0.80,metalness:0.10}));
 ceilMesh.rotation.x=Math.PI/2; ceilMesh.position.set(0,CY,0); scene.add(ceilMesh);
@@ -452,7 +452,7 @@ moldPositions.forEach(({x,z,ry,len})=>{
 });
 
 // --- LIGHTING -----------------------------------------------------------------
-scene.add(new THREE.AmbientLight(0xffe0d0,1.8));
+scene.add(new THREE.AmbientLight(0xffe0d0,0.4));
 const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
 // Recessed ceiling spots
 [[-6,-8],[-6,2],[6,-8],[6,2],[0,-3],[-6,-16],[6,-16]].forEach(([x,z])=>{
@@ -463,7 +463,7 @@ const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY
 
 // --- LOGO - BACK WALL ONLY ----------------------------------------------------
 function makeLogoTex(){
-  return mkTex(4800,1600,(ctx,W,H)=>{
+  return mkTex(3200,640,(ctx,W,H)=>{
     ctx.clearRect(0,0,W,H);
     const cx=W/2;
 
@@ -472,7 +472,7 @@ function makeLogoTex(){
     // transparent — no background fill
 
     // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
-    const iconX=cx-1580, iconY=H*0.50, iconR=240;
+    const iconX=cx-1100, iconY=H*0.50, iconR=200;
     ctx.shadowBlur=0;
 
     // 3D depth rings - layered shadow for emboss feel
@@ -604,7 +604,7 @@ function makeLogoTex(){
     // Pass 1: outer wide color bloom
     ctx.save();
     ctx.shadowColor='rgba(212,145,100,1)';
-    ctx.shadowBlur=80;
+    ctx.shadowBlur=40;
     ctx.strokeStyle='rgba(232,168,100,0.55)';
     ctx.lineWidth=28;
     ctx.lineJoin='round';
@@ -649,7 +649,7 @@ function makeLogoTex(){
     // Outer glow
     ctx.save();
     ctx.shadowColor='rgba(212,145,100,1)';
-    ctx.shadowBlur=45;
+    ctx.shadowBlur=25;
     ctx.strokeStyle='rgba(232,168,100,0.45)';
     ctx.lineWidth=14;
     ctx.lineJoin='round';
@@ -727,7 +727,7 @@ function makeLogoTex(){
 
 const logoPlane=new THREE.Mesh(
   new THREE.PlaneGeometry(RW*0.80,RH*0.38),
-  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,alphaTest:0.01,depthWrite:false})
+  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,alphaTest:0.005,depthWrite:false,premultipliedAlpha:false})
 );
 logoPlane.position.set(0,FY+RH*0.75,-RD/2+0.12); scene.add(logoPlane);
 const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.72,-RD/2+1.5); scene.add(logoGlow);

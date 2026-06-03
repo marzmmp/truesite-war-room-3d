@@ -740,11 +740,11 @@ function makeLogoTex(){
 
 
 const logoPlane=new THREE.Mesh(
-  new THREE.PlaneGeometry(RW*0.78,RH*0.44),
+  new THREE.PlaneGeometry(RW*0.80,RH*0.38),
   new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:false,depthWrite:true})
 );
-logoPlane.position.set(0,FY+RH*0.60,-RD/2+0.12); scene.add(logoPlane);
-const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.57,-RD/2+1.5); scene.add(logoGlow);
+logoPlane.position.set(0,FY+RH*0.75,-RD/2+0.12); scene.add(logoPlane);
+const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.72,-RD/2+1.5); scene.add(logoGlow);
 
 // -- Front wall (opposite logo wall) - grant proposal video screen -------------
 const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/292ae2382_30011ed43_Rose_Gold_Logo_Animation_Generated.mp4');
@@ -1568,8 +1568,8 @@ paintRing(srcCWCtx,512,512,'rgba(255,195,120,0.95)');
 paintRing(srcCCWCtx,512,512,'rgba(210,160,100,0.82)');
 const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
-const sourceGlobe=makeGlobe(4.8,srcTexCW,srcTexCCW);
-sourceGlobe.position.set(0,3.6,0); scene.add(sourceGlobe);
+const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW);
+sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,1.6,28); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 
 // --- FAMILY SEATS -------------------------------------------------------------
@@ -1772,7 +1772,7 @@ renderer.setAnimationLoop(()=>{
     });
   }
   // source globe
-  sourceGlobe.position.y=3.6+0.12*Math.sin(t*0.6);
+  sourceGlobe.position.y=3.2+0.10*Math.sin(t*0.6);
   sourceGlobe.rotation.y=t*0.18;
   animGlobe(sourceGlobe,t);
   // seats

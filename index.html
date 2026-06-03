@@ -477,7 +477,7 @@ function addBox(w,h,d,mat,px,py,pz,ry=0){
 }
 
 // Floor & ceiling
-const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.05,metalness:0.85,envMapIntensity:2.0}));
+const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.30,metalness:0.50,envMapIntensity:1.2,emissive:new THREE.Color(0.04,0.02,0.08),emissiveIntensity:1.0}));
 floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,FY,0); floorMesh.receiveShadow=true; scene.add(floorMesh);
 const ceilMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeCeilTex(),roughness:0.80,metalness:0.10}));
 ceilMesh.rotation.x=Math.PI/2; ceilMesh.position.set(0,CY,0); scene.add(ceilMesh);

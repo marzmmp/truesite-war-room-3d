@@ -136,7 +136,7 @@ camera.position.set(0,4.5,13);
 // Post-processing
 const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),1.15,0.42,0.04));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),0.55,0.35,0.72));
 
 function onResize(){
   const W=window.innerWidth,H=window.innerHeight;
@@ -471,13 +471,13 @@ moldPositions.forEach(({x,z,ry,len})=>{
 });
 
 // --- LIGHTING -----------------------------------------------------------------
-scene.add(new THREE.AmbientLight(0xffe0d0,5.0));
+scene.add(new THREE.AmbientLight(0xffe0d0,7.5));
 const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
 // Recessed ceiling spots
 [[-6,-8],[-6,2],[6,-8],[6,2],[0,-3],[-6,-16],[6,-16]].forEach(([x,z])=>{
   const disc=new THREE.Mesh(new THREE.CircleGeometry(0.22,16),new THREE.MeshBasicMaterial({color:0xfff8e8}));
   disc.rotation.x=Math.PI/2; disc.position.set(x,CY-0.01,z); scene.add(disc);
-  const pl=new THREE.PointLight(0xffe8b0,3.2,26); pl.position.set(x,CY-0.35,z); scene.add(pl);
+  const pl=new THREE.PointLight(0xffe8b0,6.5,28); pl.position.set(x,CY-0.35,z); scene.add(pl);
 });
 
 // --- LOGO - BACK WALL ONLY ----------------------------------------------------
@@ -487,10 +487,13 @@ function makeLogoTex(){
     const cx=W/2;
 
     // -- Background - deep noir with subtle warm vignette ----------------------
+    // Solid dark noir base — so logo reads cleanly on back wall
+    ctx.fillStyle='#0a0304'; ctx.fillRect(0,0,W,H);
+    // Subtle warm radial vignette over base
     const bgG=ctx.createRadialGradient(cx,H*0.55,0,cx,H*0.55,W*0.62);
-    bgG.addColorStop(0,'rgba(18,6,8,0.0)');
-    bgG.addColorStop(0.45,'rgba(12,4,6,0.0)');
-    bgG.addColorStop(1,'rgba(4,1,2,0.0)');
+    bgG.addColorStop(0,'rgba(28,10,12,0.0)');
+    bgG.addColorStop(0.55,'rgba(16,5,7,0.35)');
+    bgG.addColorStop(1,'rgba(4,1,2,0.65)');
     ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
 
     // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
@@ -737,10 +740,10 @@ function makeLogoTex(){
 
 
 const logoPlane=new THREE.Mesh(
-  new THREE.PlaneGeometry(RW*0.62,RH*0.48),
-  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,depthWrite:false})
+  new THREE.PlaneGeometry(RW*0.78,RH*0.44),
+  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:false,depthWrite:true})
 );
-logoPlane.position.set(0,FY+RH*0.58,-RD/2+0.12); scene.add(logoPlane);
+logoPlane.position.set(0,FY+RH*0.60,-RD/2+0.12); scene.add(logoPlane);
 const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.57,-RD/2+1.5); scene.add(logoGlow);
 
 // -- Front wall (opposite logo wall) - grant proposal video screen -------------

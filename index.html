@@ -586,7 +586,7 @@ moldPositions.forEach(({x,z,ry,len})=>{
 });
 
 // --- LIGHTING -----------------------------------------------------------------
-scene.add(new THREE.AmbientLight(0xffe0d0,7.5));
+scene.add(new THREE.AmbientLight(0xffe0d0,1.8));
 const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
 // Recessed ceiling spots
 [[-6,-8],[-6,2],[6,-8],[6,2],[0,-3],[-6,-16],[6,-16]].forEach(([x,z])=>{

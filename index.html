@@ -120,15 +120,15 @@ renderer.toneMappingExposure=1.72;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 
 // -- High-quality environment lighting for metallic surfaces ------------------
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x040202);
+scene.fog=new THREE.FogExp2(0x040202,0.012);
+
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envScene = new RoomEnvironment();
 scene.environment = pmrem.fromScene(envScene).texture;
 scene.environment.colorSpace = THREE.SRGBColorSpace;
 pmrem.dispose();
-
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x040202);
-scene.fog=new THREE.FogExp2(0x040202,0.012);
 
 const camera=new THREE.PerspectiveCamera(48,1,0.05,200);
 camera.position.set(0,4.5,13);

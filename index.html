@@ -206,209 +206,264 @@ function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
 function makeFloorTex(){
   return mkTex(4096,4096,(ctx,W,H)=>{
 
-    // ── LAYER 0: Deep space base — near-black with subtle deep blue-indigo ──
-    const base=ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,W*0.85);
-    base.addColorStop(0,   '#0c0a14');
-    base.addColorStop(0.30,'#08060f');
-    base.addColorStop(0.65,'#060408');
-    base.addColorStop(1,   '#030204');
-    ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
+    // ══ LAYER 0: True deep-space black base ══
+    ctx.fillStyle='#000005';
+    ctx.fillRect(0,0,W,H);
 
-    // ── LAYER 1: Galaxy nebula clouds — deep blues, purples, teals, rose ──
-    const nebulae=[
-      // Large arm sweeps
-      {cx:0.22,cy:0.28,r:0.52,c0:'rgba(60,30,120,0.28)', c1:'rgba(0,0,0,0)'},
-      {cx:0.75,cy:0.68,r:0.48,c0:'rgba(90,20,110,0.22)', c1:'rgba(0,0,0,0)'},
-      {cx:0.50,cy:0.50,r:0.60,c0:'rgba(30,50,130,0.15)', c1:'rgba(0,0,0,0)'},
-      {cx:0.10,cy:0.80,r:0.35,c0:'rgba(70,15,100,0.24)', c1:'rgba(0,0,0,0)'},
-      {cx:0.88,cy:0.15,r:0.32,c0:'rgba(20,80,120,0.20)', c1:'rgba(0,0,0,0)'},
-      // Mid clouds
-      {cx:0.60,cy:0.20,r:0.26,c0:'rgba(110,40,140,0.26)',c1:'rgba(0,0,0,0)'},
-      {cx:0.35,cy:0.72,r:0.30,c0:'rgba(40,100,140,0.18)',c1:'rgba(0,0,0,0)'},
-      {cx:0.80,cy:0.42,r:0.22,c0:'rgba(140,30,80,0.20)', c1:'rgba(0,0,0,0)'},
-      // Accent rose-gold warmth near center
-      {cx:0.48,cy:0.52,r:0.28,c0:'rgba(160,80,120,0.14)',c1:'rgba(0,0,0,0)'},
-      {cx:0.62,cy:0.55,r:0.20,c0:'rgba(200,120,60,0.10)',c1:'rgba(0,0,0,0)'},
-      // Teal / cyan arm
-      {cx:0.18,cy:0.42,r:0.38,c0:'rgba(20,130,150,0.16)',c1:'rgba(0,0,0,0)'},
-      {cx:0.70,cy:0.88,r:0.28,c0:'rgba(30,110,130,0.18)',c1:'rgba(0,0,0,0)'},
+    // ══ LAYER 1: Milky Way core — bright dense star-cloud band ══
+    // Diagonal band sweeping across the floor like a galaxy arm
+    const mwAngle = Math.PI * 0.28;
+    const mwCX = W*0.52, mwCY = H*0.48;
+    // Save/restore for rotated band
+    ctx.save();
+    ctx.translate(mwCX, mwCY);
+    ctx.rotate(mwAngle);
+    // Wide soft core glow
+    const mwCore = ctx.createRadialGradient(0, 0, 0, 0, 0, W*0.55);
+    mwCore.addColorStop(0,   'rgba(255,245,220,0.22)');
+    mwCore.addColorStop(0.15,'rgba(240,220,180,0.14)');
+    mwCore.addColorStop(0.35,'rgba(200,180,140,0.07)');
+    mwCore.addColorStop(0.6, 'rgba(140,120,100,0.03)');
+    mwCore.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = mwCore;
+    ctx.fillRect(-W, -H, W*2, H*2);
+    ctx.restore();
+
+    // ══ LAYER 2: Nebula cloud system — rich, swirling, multi-color ══
+    // Each nebula: multiple overlapping radial blobs to create depth + swirl
+    function nebula(cx, cy, layers) {
+      layers.forEach(([dr, dc, r, col, alpha]) => {
+        const nx = cx*W + dr*W*0.08, ny = cy*H + dc*H*0.08;
+        const g = ctx.createRadialGradient(nx, ny, 0, nx, ny, r*W);
+        g.addColorStop(0,   col.replace('A', alpha.toFixed(3)));
+        g.addColorStop(0.3, col.replace('A', (alpha*0.55).toFixed(3)));
+        g.addColorStop(0.65,col.replace('A', (alpha*0.18).toFixed(3)));
+        g.addColorStop(1,   col.replace('A', '0'));
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0,W,H);
+      });
+    }
+
+    // Pillars of Creation — amber/orange towering structure
+    nebula(0.18, 0.22, [
+      [ 0.0,  0.0,  0.32, 'rgba(255,160,50,A)',  0.32],
+      [ 0.4, -0.3,  0.22, 'rgba(230,120,30,A)',  0.24],
+      [-0.5,  0.5,  0.18, 'rgba(200,90,20,A)',   0.20],
+      [ 0.0,  0.0,  0.14, 'rgba(255,200,100,A)', 0.18],
+    ]);
+
+    // Blue-white Orion-style emission nebula
+    nebula(0.72, 0.18, [
+      [ 0.0,  0.0,  0.30, 'rgba(80,160,255,A)',  0.28],
+      [-0.4,  0.3,  0.22, 'rgba(40,120,220,A)',  0.22],
+      [ 0.5, -0.2,  0.16, 'rgba(120,200,255,A)', 0.20],
+      [ 0.0,  0.0,  0.10, 'rgba(200,230,255,A)', 0.15],
+    ]);
+
+    // Deep rose/magenta — Carina-style
+    nebula(0.48, 0.78, [
+      [ 0.0,  0.0,  0.35, 'rgba(220,60,140,A)',  0.25],
+      [ 0.5,  0.4,  0.22, 'rgba(180,40,110,A)',  0.20],
+      [-0.4, -0.5,  0.20, 'rgba(255,100,160,A)', 0.18],
+      [ 0.0,  0.0,  0.12, 'rgba(255,140,200,A)', 0.14],
+    ]);
+
+    // Teal/cyan — Helix-style ring nebula glow
+    nebula(0.82, 0.60, [
+      [ 0.0,  0.0,  0.26, 'rgba(20,200,190,A)',  0.22],
+      [-0.3,  0.4,  0.18, 'rgba(0,160,160,A)',   0.18],
+      [ 0.4, -0.3,  0.14, 'rgba(80,230,220,A)',  0.16],
+    ]);
+
+    // Purple/violet — dark molecular cloud
+    nebula(0.12, 0.65, [
+      [ 0.0,  0.0,  0.30, 'rgba(110,30,160,A)',  0.30],
+      [ 0.5,  0.3,  0.20, 'rgba(80,20,130,A)',   0.22],
+      [-0.3, -0.4,  0.16, 'rgba(160,60,200,A)',  0.18],
+      [ 0.0,  0.0,  0.10, 'rgba(200,120,255,A)', 0.12],
+    ]);
+
+    // Green/emerald — exotic emission
+    nebula(0.62, 0.42, [
+      [ 0.0,  0.0,  0.22, 'rgba(40,200,80,A)',   0.18],
+      [ 0.4,  0.3,  0.16, 'rgba(20,160,60,A)',   0.14],
+      [-0.3, -0.4,  0.12, 'rgba(100,230,140,A)', 0.12],
+    ]);
+
+    // Gold/amber secondary arm
+    nebula(0.35, 0.45, [
+      [ 0.0,  0.0,  0.24, 'rgba(255,190,40,A)',  0.16],
+      [ 0.3, -0.4,  0.16, 'rgba(220,150,20,A)',  0.12],
+      [-0.4,  0.3,  0.12, 'rgba(255,220,100,A)', 0.10],
+    ]);
+
+    // ══ LAYER 3: Nebula wisp streaks — directional brush strokes ══
+    const wisps = [
+      // [x0,y0, cpx1,cpy1, cpx2,cpy2, x1,y1, color, alpha, lineWidth]
+      [0.05,0.10, 0.30,0.05, 0.55,0.25, 0.80,0.15, 'rgba(255,150,50,A)', 0.12, 3.5],
+      [0.10,0.80, 0.35,0.70, 0.60,0.90, 0.90,0.75, 'rgba(80,160,255,A)', 0.10, 2.8],
+      [0.20,0.30, 0.45,0.55, 0.65,0.25, 0.88,0.50, 'rgba(220,60,140,A)', 0.08, 3.0],
+      [0.02,0.50, 0.25,0.30, 0.55,0.70, 0.75,0.40, 'rgba(20,200,190,A)', 0.09, 2.5],
+      [0.60,0.05, 0.50,0.30, 0.80,0.45, 0.95,0.30, 'rgba(110,30,160,A)', 0.11, 4.0],
+      [0.15,0.95, 0.40,0.80, 0.65,0.95, 0.92,0.88, 'rgba(255,190,40,A)', 0.08, 2.2],
+      [0.00,0.25, 0.20,0.50, 0.40,0.20, 0.60,0.55, 'rgba(200,230,255,A)',0.07, 1.8],
+      [0.40,0.98, 0.55,0.75, 0.75,0.85, 0.98,0.65, 'rgba(40,200,80,A)',  0.08, 2.0],
     ];
-    nebulae.forEach(({cx,cy,r,c0,c1})=>{
-      const g=ctx.createRadialGradient(cx*W,cy*H,0,cx*W,cy*H,r*W);
-      g.addColorStop(0,c0); g.addColorStop(1,c1);
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    wisps.forEach(([x0,y0,cpx1,cpy1,cpx2,cpy2,x1,y1,col,al,lw])=>{
+      for(let pass=0; pass<3; pass++){
+        ctx.beginPath();
+        ctx.moveTo(x0*W+pass*8, y0*H+pass*5);
+        ctx.bezierCurveTo(cpx1*W,cpy1*H, cpx2*W,cpy2*H, x1*W+pass*6,y1*H+pass*4);
+        ctx.strokeStyle = col.replace('A', (al*(1-pass*0.3)).toFixed(3));
+        ctx.lineWidth = lw * (1 + pass * 0.8);
+        ctx.stroke();
+      }
     });
 
-    // ── LAYER 2: Epoxy veins — copper, rose gold, warm gold ──
-    const veins=[
-      'rgba(200,130,70,VAL)',
-      'rgba(212,145,158,VAL)',
-      'rgba(230,160,90,VAL)',
-      'rgba(190,110,130,VAL)',
-      'rgba(245,195,120,VAL)',
-      'rgba(160,80,60,VAL)',
-      'rgba(220,170,140,VAL)',
-    ];
-    for(let i=0;i<60;i++){
-      const col=veins[i%veins.length];
-      const alpha=(0.04+Math.sin(i*1.3)*0.03).toFixed(3);
-      ctx.beginPath();
-      ctx.moveTo(Math.random()*W,Math.random()*H);
-      ctx.bezierCurveTo(Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H);
-      ctx.strokeStyle=col.replace('VAL',alpha);
-      ctx.lineWidth=1.5+Math.random()*4.5; ctx.stroke();
-    }
-    for(let i=0;i<40;i++){
-      const col=veins[i%veins.length];
-      const alpha=(0.06+Math.random()*0.08).toFixed(3);
-      ctx.beginPath();
-      ctx.moveTo(Math.random()*W,Math.random()*H);
-      ctx.quadraticCurveTo(Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H);
-      ctx.strokeStyle=col.replace('VAL',alpha);
-      ctx.lineWidth=0.5+Math.random()*1.8; ctx.stroke();
-    }
-
-    // ── LAYER 3: Star field — white, blue-white, warm-gold points ──
-    for(let i=0;i<2800;i++){
+    // ══ LAYER 4: Dense star field — thousands of stars ══
+    // Background faint stars
+    for(let i=0;i<3500;i++){
       const sx=Math.random()*W, sy=Math.random()*H;
-      const sr=Math.random()*1.6;
-      const b=Math.random();
+      const sr=Math.random()*0.9;
+      const lum=Math.random();
       let sc;
-      if(b>0.88)      sc=`rgba(255,255,255,${(0.7+Math.random()*0.3).toFixed(2)})`;
-      else if(b>0.72) sc=`rgba(200,220,255,${(0.4+Math.random()*0.4).toFixed(2)})`;
-      else if(b>0.55) sc=`rgba(255,240,180,${(0.3+Math.random()*0.35).toFixed(2)})`;
-      else if(b>0.38) sc=`rgba(180,160,255,${(0.2+Math.random()*0.3).toFixed(2)})`;
-      else            sc=`rgba(140,190,220,${(0.1+Math.random()*0.2).toFixed(2)})`;
+      if(lum>0.92)      sc=`rgba(255,255,255,${(0.7+Math.random()*0.3).toFixed(2)})`;
+      else if(lum>0.80) sc=`rgba(210,230,255,${(0.4+Math.random()*0.4).toFixed(2)})`;
+      else if(lum>0.65) sc=`rgba(255,240,200,${(0.3+Math.random()*0.3).toFixed(2)})`;
+      else if(lum>0.50) sc=`rgba(180,200,255,${(0.2+Math.random()*0.25).toFixed(2)})`;
+      else              sc=`rgba(160,180,220,${(0.08+Math.random()*0.15).toFixed(2)})`;
       ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2);
       ctx.fillStyle=sc; ctx.fill();
     }
 
-    // ── LAYER 4: Star glint crosses — brightest stars get 4-point cross ──
-    for(let i=0;i<120;i++){
+    // Bright foreground stars with glow halos
+    for(let i=0;i<180;i++){
+      const sx=Math.random()*W, sy=Math.random()*H;
+      const sr=1.2+Math.random()*3.5;
+      // Glow halo
+      const halo=ctx.createRadialGradient(sx,sy,0,sx,sy,sr*5);
+      const pick=Math.random();
+      let hc;
+      if(pick>0.7)      hc='rgba(200,220,255,';
+      else if(pick>0.4) hc='rgba(255,240,200,';
+      else              hc='rgba(255,180,100,';
+      halo.addColorStop(0, hc+'0.9)');
+      halo.addColorStop(0.3, hc+'0.35)');
+      halo.addColorStop(0.7, hc+'0.10)');
+      halo.addColorStop(1,   hc+'0)');
+      ctx.fillStyle=halo;
+      ctx.beginPath(); ctx.arc(sx,sy,sr*5,0,Math.PI*2); ctx.fill();
+      // Core dot
+      ctx.fillStyle=`rgba(255,255,255,0.95)`;
+      ctx.beginPath(); ctx.arc(sx,sy,sr*0.5,0,Math.PI*2); ctx.fill();
+    }
+
+    // ══ LAYER 5: 4-point star glints — brightest stars ══
+    for(let i=0;i<90;i++){
       const gx=Math.random()*W, gy=Math.random()*H;
-      const gl=4+Math.random()*18;
-      const gal=0.35+Math.random()*0.55;
+      const gl=6+Math.random()*24;
+      const ga=0.5+Math.random()*0.45;
+      const pick=Math.random();
+      let gc;
+      if(pick>0.6) gc='rgba(255,255,255,';
+      else if(pick>0.3) gc='rgba(200,230,255,';
+      else gc='rgba(255,230,160,';
       ctx.save();
-      ctx.globalAlpha=gal;
-      ctx.strokeStyle='rgba(220,235,255,0.9)';
-      ctx.lineWidth=0.8;
+      ctx.globalAlpha=ga;
+      // Main cross
+      ctx.strokeStyle=gc+'0.95)'; ctx.lineWidth=1.2;
       ctx.beginPath(); ctx.moveTo(gx-gl,gy); ctx.lineTo(gx+gl,gy); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(gx,gy-gl); ctx.lineTo(gx,gy+gl); ctx.stroke();
-      // diagonal faint arms
-      ctx.globalAlpha=gal*0.4;
-      ctx.lineWidth=0.5;
-      ctx.beginPath(); ctx.moveTo(gx-gl*0.6,gy-gl*0.6); ctx.lineTo(gx+gl*0.6,gy+gl*0.6); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(gx+gl*0.6,gy-gl*0.6); ctx.lineTo(gx-gl*0.6,gy+gl*0.6); ctx.stroke();
+      // Diagonal faint arms
+      ctx.globalAlpha=ga*0.35; ctx.lineWidth=0.6;
+      ctx.beginPath(); ctx.moveTo(gx-gl*0.65,gy-gl*0.65); ctx.lineTo(gx+gl*0.65,gy+gl*0.65); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gx+gl*0.65,gy-gl*0.65); ctx.lineTo(gx-gl*0.65,gy+gl*0.65); ctx.stroke();
       ctx.restore();
     }
 
-    // ── LAYER 5: Hebrew Names — יהוה + יהושע as glowing star-text ──
-    // YAHUAH  = יהוה  (Yod-Heh-Vav-Heh)
-    // YAHUSHA = יהושע (Yod-Heh-Vav-Shin-Ayin)
+    // ══ LAYER 6: Hebrew Sacred Names — יהוה + יהושע as glowing star-text ══
     const YAHUAH  = '\u05D9\u05D4\u05D5\u05D4';
     const YAHUSHA = '\u05D9\u05D4\u05D5\u05E9\u05E2';
 
-    // Scatter positions — pre-determined so they feel organic not grid-like
-    const nameSeeds=[
-      // [x_frac, y_frac, text, size, alpha, color]
-      [0.12, 0.10, YAHUAH,  110, 0.55, 'rgba(255,245,200,A)'],
-      [0.55, 0.08, YAHUSHA, 90,  0.45, 'rgba(180,210,255,A)'],
-      [0.82, 0.18, YAHUAH,  80,  0.35, 'rgba(220,180,255,A)'],
-      [0.08, 0.35, YAHUSHA, 100, 0.50, 'rgba(160,230,200,A)'],
-      [0.42, 0.28, YAHUAH,  75,  0.30, 'rgba(255,235,160,A)'],
-      [0.72, 0.32, YAHUSHA, 85,  0.42, 'rgba(200,200,255,A)'],
-      [0.25, 0.52, YAHUAH,  95,  0.48, 'rgba(255,220,180,A)'],
-      [0.65, 0.50, YAHUSHA, 70,  0.28, 'rgba(180,245,220,A)'],
-      [0.90, 0.48, YAHUAH,  80,  0.38, 'rgba(240,200,255,A)'],
-      [0.15, 0.70, YAHUSHA, 90,  0.44, 'rgba(200,230,255,A)'],
-      [0.50, 0.68, YAHUAH,  110, 0.52, 'rgba(255,250,210,A)'],
-      [0.78, 0.72, YAHUSHA, 80,  0.35, 'rgba(220,160,255,A)'],
-      [0.32, 0.85, YAHUAH,  75,  0.32, 'rgba(180,220,255,A)'],
-      [0.62, 0.88, YAHUSHA, 95,  0.46, 'rgba(255,210,190,A)'],
-      [0.88, 0.85, YAHUAH,  70,  0.28, 'rgba(210,240,200,A)'],
-      // Extra smaller scatter
-      [0.38, 0.15, YAHUAH,  60,  0.22, 'rgba(200,200,255,A)'],
-      [0.92, 0.62, YAHUSHA, 65,  0.25, 'rgba(255,230,180,A)'],
-      [0.05, 0.55, YAHUAH,  55,  0.20, 'rgba(180,240,240,A)'],
-      [0.72, 0.10, YAHUSHA, 58,  0.22, 'rgba(240,200,240,A)'],
-      [0.45, 0.92, YAHUAH,  62,  0.24, 'rgba(255,255,220,A)'],
+    // Each entry: [x_frac, y_frac, text, fontSize, alpha, innerColor, glowColor]
+    const names=[
+      [0.10, 0.08, YAHUAH,  130, 0.65, 'rgba(255,250,220,A)', 'rgba(255,240,140,A)'],
+      [0.58, 0.06, YAHUSHA, 105, 0.55, 'rgba(180,215,255,A)', 'rgba(100,180,255,A)'],
+      [0.84, 0.16, YAHUAH,   88, 0.40, 'rgba(255,200,255,A)', 'rgba(200,100,255,A)'],
+      [0.06, 0.38, YAHUSHA, 110, 0.52, 'rgba(160,255,210,A)', 'rgba(40,200,150,A)'],
+      [0.40, 0.25, YAHUAH,   82, 0.32, 'rgba(255,230,160,A)', 'rgba(255,180,40,A)'],
+      [0.74, 0.30, YAHUSHA,  95, 0.45, 'rgba(200,200,255,A)', 'rgba(120,120,255,A)'],
+      [0.22, 0.55, YAHUAH,  108, 0.50, 'rgba(255,225,190,A)', 'rgba(255,160,80,A)'],
+      [0.66, 0.52, YAHUSHA,  78, 0.30, 'rgba(170,250,230,A)', 'rgba(40,220,190,A)'],
+      [0.91, 0.50, YAHUAH,   88, 0.40, 'rgba(240,190,255,A)', 'rgba(180,60,220,A)'],
+      [0.14, 0.73, YAHUSHA, 102, 0.48, 'rgba(200,230,255,A)', 'rgba(80,160,240,A)'],
+      [0.50, 0.70, YAHUAH,  118, 0.58, 'rgba(255,255,210,A)', 'rgba(255,245,130,A)'],
+      [0.78, 0.74, YAHUSHA,  86, 0.37, 'rgba(230,160,255,A)', 'rgba(160,40,220,A)'],
+      [0.30, 0.88, YAHUAH,   80, 0.34, 'rgba(180,220,255,A)', 'rgba(80,160,255,A)'],
+      [0.64, 0.90, YAHUSHA, 100, 0.50, 'rgba(255,210,185,A)', 'rgba(255,140,80,A)'],
+      [0.90, 0.86, YAHUAH,   74, 0.28, 'rgba(210,245,200,A)', 'rgba(80,200,80,A)'],
+      [0.36, 0.13, YAHUAH,   65, 0.24, 'rgba(200,210,255,A)', 'rgba(100,130,255,A)'],
+      [0.93, 0.64, YAHUSHA,  70, 0.27, 'rgba(255,230,175,A)', 'rgba(255,190,60,A)'],
+      [0.03, 0.57, YAHUAH,   60, 0.22, 'rgba(170,245,240,A)', 'rgba(30,200,200,A)'],
+      [0.75, 0.08, YAHUSHA,  62, 0.24, 'rgba(245,195,245,A)', 'rgba(200,80,200,A)'],
+      [0.46, 0.95, YAHUAH,   68, 0.26, 'rgba(255,255,220,A)', 'rgba(255,250,150,A)'],
     ];
 
-    nameSeeds.forEach(([xf,yf,txt,sz,al,colTemplate])=>{
+    names.forEach(([xf,yf,txt,sz,al,innerCol,glowCol])=>{
       const tx=xf*W, ty=yf*H;
       ctx.save();
 
-      // Glow aura behind each name
-      const glowR=sz*2.2;
-      const glowC=colTemplate.replace('A','0');
-      const glowCenter=colTemplate.replace('A',(al*0.45).toFixed(2));
-      const glow=ctx.createRadialGradient(tx,ty,0,tx,ty,glowR);
-      glow.addColorStop(0,glowCenter);
-      glow.addColorStop(0.4,colTemplate.replace('A',(al*0.18).toFixed(2)));
-      glow.addColorStop(1,glowC);
-      ctx.fillStyle=glow;
-      ctx.beginPath(); ctx.arc(tx,ty,glowR,0,Math.PI*2); ctx.fill();
+      // Outer wide glow — large soft bloom
+      const outerR = sz * 3.5;
+      const outerG = ctx.createRadialGradient(tx,ty,0,tx,ty,outerR);
+      outerG.addColorStop(0,   glowCol.replace('A',(al*0.35).toFixed(3)));
+      outerG.addColorStop(0.4, glowCol.replace('A',(al*0.12).toFixed(3)));
+      outerG.addColorStop(1,   glowCol.replace('A','0'));
+      ctx.fillStyle=outerG;
+      ctx.beginPath(); ctx.arc(tx,ty,outerR,0,Math.PI*2); ctx.fill();
 
-      // Main text glow (wide soft shadow)
       ctx.font=`bold ${sz}px serif`;
       ctx.textAlign='center';
       ctx.textBaseline='middle';
-      ctx.shadowColor=colTemplate.replace('A','0.9');
-      ctx.shadowBlur=sz*1.2;
-      ctx.fillStyle=colTemplate.replace('A',(al*0.3).toFixed(2));
-      ctx.fillText(txt,tx,ty);
 
-      // Core text — brighter, crisp
-      ctx.shadowBlur=sz*0.5;
-      ctx.fillStyle=colTemplate.replace('A',al.toFixed(2));
-      ctx.fillText(txt,tx,ty);
+      // Pass 1: wide glow shadow
+      ctx.shadowColor = glowCol.replace('A','1');
+      ctx.shadowBlur  = sz * 2.0;
+      ctx.fillStyle   = glowCol.replace('A',(al*0.25).toFixed(3));
+      ctx.fillText(txt, tx, ty);
 
-      // Inner bright core
-      ctx.shadowBlur=sz*0.2;
-      ctx.fillStyle=colTemplate.replace('A',Math.min(al+0.25,0.95).toFixed(2));
-      ctx.fillText(txt,tx,ty);
+      // Pass 2: medium glow
+      ctx.shadowBlur  = sz * 0.9;
+      ctx.fillStyle   = innerCol.replace('A',(al*0.6).toFixed(3));
+      ctx.fillText(txt, tx, ty);
+
+      // Pass 3: bright core
+      ctx.shadowBlur  = sz * 0.25;
+      ctx.fillStyle   = innerCol.replace('A', Math.min(al+0.3, 0.98).toFixed(3));
+      ctx.fillText(txt, tx, ty);
 
       ctx.restore();
     });
 
-    // ── LAYER 6: Copper + rose glitter specks (epoxy sparkle) ──
-    for(let i=0;i<320;i++){
-      const gx=Math.random()*W, gy=Math.random()*H;
-      const gr=0.6+Math.random()*2.2;
-      const g2=ctx.createRadialGradient(gx,gy,0,gx,gy,gr*3);
-      if(Math.random()>0.5){
-        g2.addColorStop(0,'rgba(245,185,100,0.85)');
-        g2.addColorStop(0.4,'rgba(200,130,70,0.35)');
-        g2.addColorStop(1,'rgba(180,100,50,0)');
-      } else {
-        g2.addColorStop(0,'rgba(230,170,175,0.80)');
-        g2.addColorStop(0.4,'rgba(195,125,140,0.30)');
-        g2.addColorStop(1,'rgba(160,90,110,0)');
-      }
-      ctx.fillStyle=g2;
-      ctx.beginPath(); ctx.arc(gx,gy,gr*3,0,Math.PI*2); ctx.fill();
+    // ══ LAYER 7: Copper/rose-gold epoxy veins (subtle, underneath the stars) ══
+    const veins=['rgba(200,130,70,A)','rgba(212,145,158,A)','rgba(230,160,90,A)',
+                 'rgba(190,110,130,A)','rgba(245,195,120,A)'];
+    for(let i=0;i<50;i++){
+      const col=veins[i%veins.length];
+      const al=(0.03+Math.sin(i*1.3)*0.02).toFixed(3);
+      ctx.beginPath();
+      ctx.moveTo(Math.random()*W,Math.random()*H);
+      ctx.bezierCurveTo(Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H);
+      ctx.strokeStyle=col.replace('A',al); ctx.lineWidth=1+Math.random()*3; ctx.stroke();
     }
 
-    // ── LAYER 7: Edge glow — rose gold perimeter ──
-    const eg1=ctx.createLinearGradient(0,0,0,H);
-    eg1.addColorStop(0,'rgba(212,145,158,0.14)');
-    eg1.addColorStop(0.07,'rgba(212,145,158,0)');
-    eg1.addColorStop(0.93,'rgba(212,145,158,0)');
-    eg1.addColorStop(1,'rgba(212,145,158,0.14)');
-    ctx.fillStyle=eg1; ctx.fillRect(0,0,W,H);
-    const eg2=ctx.createLinearGradient(0,0,W,0);
-    eg2.addColorStop(0,'rgba(200,130,70,0.12)');
-    eg2.addColorStop(0.06,'rgba(200,130,70,0)');
-    eg2.addColorStop(0.94,'rgba(200,130,70,0)');
-    eg2.addColorStop(1,'rgba(200,130,70,0.12)');
-    ctx.fillStyle=eg2; ctx.fillRect(0,0,W,H);
-
-    // ── LAYER 8: Epoxy wet-look gloss sheen ──
-    const gloss=ctx.createRadialGradient(W*0.38,H*0.3,0,W*0.5,H*0.5,W*0.7);
-    gloss.addColorStop(0,'rgba(255,220,255,0.05)');
-    gloss.addColorStop(0.4,'rgba(180,160,220,0.025)');
+    // ══ LAYER 8: Gloss sheen — keep the epoxy wet-look ══
+    const gloss=ctx.createRadialGradient(W*0.40,H*0.35,0,W*0.5,H*0.5,W*0.72);
+    gloss.addColorStop(0,'rgba(255,255,255,0.04)');
+    gloss.addColorStop(0.5,'rgba(200,200,220,0.015)');
     gloss.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=gloss; ctx.fillRect(0,0,W,H);
+
   });
 }
 
@@ -477,7 +532,7 @@ function addBox(w,h,d,mat,px,py,pz,ry=0){
 }
 
 // Floor & ceiling
-const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.30,metalness:0.50,envMapIntensity:1.2,emissive:new THREE.Color(0.04,0.02,0.08),emissiveIntensity:1.0}));
+const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.18,metalness:0.55,envMapIntensity:0.8,emissive:new THREE.Color(0.01,0.005,0.02),emissiveIntensity:1.0}));
 floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,FY,0); floorMesh.receiveShadow=true; scene.add(floorMesh);
 const ceilMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeCeilTex(),roughness:0.80,metalness:0.10}));
 ceilMesh.rotation.x=Math.PI/2; ceilMesh.position.set(0,CY,0); scene.add(ceilMesh);

@@ -113,7 +113,7 @@ const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance',logarithmicDepthBuffer:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,3));
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type = THREE.VSMShadowMap;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.physicallyCorrectLights = true;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.72;
@@ -477,7 +477,7 @@ const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY
 [[-6,-8],[-6,2],[6,-8],[6,2],[0,-3],[-6,-16],[6,-16]].forEach(([x,z])=>{
   const disc=new THREE.Mesh(new THREE.CircleGeometry(0.22,16),new THREE.MeshBasicMaterial({color:0xfff8e8}));
   disc.rotation.x=Math.PI/2; disc.position.set(x,CY-0.01,z); scene.add(disc);
-  const pl=new THREE.PointLight(0xffe8b0,3.2,26); pl.position.set(x,CY-0.35,z); pl.castShadow=true; scene.add(pl);
+  const pl=new THREE.PointLight(0xffe8b0,3.2,26); pl.position.set(x,CY-0.35,z); scene.add(pl);
 });
 
 // --- LOGO - BACK WALL ONLY ----------------------------------------------------

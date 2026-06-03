@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>TrueSite — War Room</title>
+<title>TrueSite -- War Room</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;background:#040202;overflow:hidden;}
@@ -19,7 +19,7 @@ canvas{display:block;}
 <div id="ui">
   <div id="tooltip"></div>
   <div id="info"></div>
-  <div id="legend"><b>DRAG</b> to orbit &nbsp;·&nbsp; <b>SCROLL</b> to zoom &nbsp;·&nbsp; <b>CLICK</b> a seat</div>
+  <div id="legend"><b>DRAG</b> to orbit &nbsp;|&nbsp; <b>SCROLL</b> to zoom &nbsp;|&nbsp; <b>CLICK</b> a seat</div>
 </div>
 
 <script type="importmap">
@@ -32,11 +32,11 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
-// ─── φ / SACRED ───────────────────────────────────────────────────────────────
+// --- - / SACRED ---------------------------------------------------------------
 const PHI = 1.6180339887498948482;
 const SACRED = [3,5,6,5,3,6,9,9,6,3];
 
-// ─── COLOR SYSTEM (exact fol_globe_v4 logic) ─────────────────────────────────
+// --- COLOR SYSTEM (exact fol_globe_v4 logic) ---------------------------------
 const PHI_STOPS = [];
 for(let i=0;i<8;i++){
   const hue=((i*360*(1-1/PHI))%360)/360, s=(1/PHI), l=0.55+(i%3)*(PHI-1)*0.06;
@@ -56,11 +56,11 @@ function getColor(t){
   return{r:a.r+(b.r-a.r)*ease, g:a.g+(b.g-a.g)*ease, b:a.b+(b.b-a.b)*ease};
 }
 
-// ─── CANVAS HELPER ────────────────────────────────────────────────────────────
+// --- CANVAS HELPER ------------------------------------------------------------
 function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
 function mkTex(w,h,draw){const c=mkCanvas(w,h);draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;return t;}
 
-// ─── SACRED CIRCLE PAINTER ────────────────────────────────────────────────────
+// --- SACRED CIRCLE PAINTER ----------------------------------------------------
 function paintRing(ctx,w,h,css){
   ctx.clearRect(0,0,w,h);
   const cx=w/2,cy=h/2,r=Math.min(w,h)*0.42,fs=11,cw=fs*0.62;
@@ -73,7 +73,7 @@ function paintRing(ctx,w,h,css){
   }
 }
 
-// ─── GLOBE BUILDER ────────────────────────────────────────────────────────────
+// --- GLOBE BUILDER ------------------------------------------------------------
 function makeGlobe(scale, cwTex, ccwTex){
   const group = new THREE.Group();
   const N=128, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
@@ -108,7 +108,7 @@ function animGlobe(group, t){
   });
 }
 
-// ─── SCENE SETUP ──────────────────────────────────────────────────────────────
+// --- SCENE SETUP --------------------------------------------------------------
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance',logarithmicDepthBuffer:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,3));
@@ -119,10 +119,9 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.72;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 
-// ── High-quality environment lighting for metallic surfaces ──────────────────
+// -- High-quality environment lighting for metallic surfaces ------------------
 const pmrem = new THREE.PMREMGenerator(renderer);
-pmrem.compileEquirectangularShader();
-const envScene = new THREE.RoomEnvironment(0.7);
+const envScene = new RoomEnvironment();
 scene.environment = pmrem.fromScene(envScene).texture;
 scene.environment.colorSpace = THREE.SRGBColorSpace;
 pmrem.dispose();
@@ -146,19 +145,19 @@ function onResize(){
 }
 onResize(); window.addEventListener('resize',onResize);
 
-// ─── MATERIALS ────────────────────────────────────────────────────────────────
+// --- MATERIALS ----------------------------------------------------------------
 const RG={main:0xd4919e, dark:0xb86070, emissive:0x5a1822};
 function rgMat(ei=0.5){return new THREE.MeshStandardMaterial({color:RG.main,roughness:0.18,metalness:0.95,emissive:RG.emissive,emissiveIntensity:ei});}
 function darkMat(col=0x0a0505){return new THREE.MeshStandardMaterial({color:col,roughness:0.82,metalness:0.15});}
 
-// Wall texture — black panels with rose-gold dado
+// Wall texture - black panels with rose-gold dado
 function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
   return mkTex(W,H,(ctx)=>{
     // Deep black lacquer base
     const baseG=ctx.createLinearGradient(0,0,W,H);
     baseG.addColorStop(0,'#080303'); baseG.addColorStop(0.5,'#050202'); baseG.addColorStop(1,'#060303');
     ctx.fillStyle=baseG; ctx.fillRect(0,0,W,H);
-    // Micro grain — leather/lacquer feel
+    // Micro grain - leather/lacquer feel
     for(let i=0;i<8000;i++){
       const a=(Math.random()*0.04).toFixed(3);
       ctx.fillStyle=`rgba(30,10,10,${a})`; ctx.fillRect(Math.random()*W,Math.random()*H,1,Math.random()>0.6?2:1);
@@ -180,7 +179,7 @@ function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
       sheen.addColorStop(0,'rgba(255,200,180,0.05)'); sheen.addColorStop(1,'rgba(200,140,120,0.02)');
       ctx.fillStyle=sheen; ctx.fillRect(x+2,y+2,w-4,h-4);
     }
-    // Dado rail — brushed rose-gold metallic band
+    // Dado rail - brushed rose-gold metallic band
     const d=H*0.38;
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,d+18,W,10);
     const railG=ctx.createLinearGradient(0,d,0,d+18);
@@ -206,7 +205,7 @@ function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
 }
 function makeFloorTex(){
   return mkTex(4096,4096,(ctx,W,H)=>{
-    // ── Base: deep space near-black with warm copper undertone ────────────
+    // -- Base: deep space near-black with warm copper undertone ------------
     const base = ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,W*0.78);
     base.addColorStop(0,   '#1a0d0a');
     base.addColorStop(0.35,'#120806');
@@ -214,7 +213,7 @@ function makeFloorTex(){
     base.addColorStop(1,   '#080302');
     ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
 
-    // ── Galaxy nebula clouds ───────────────────────────────────────────────
+    // -- Galaxy nebula clouds -----------------------------------------------
     const clouds = [
       {cx:0.28,cy:0.32,r:0.42,c0:'rgba(180,90,50,0.18)',c1:'rgba(0,0,0,0)'},
       {cx:0.72,cy:0.65,r:0.38,c0:'rgba(160,70,80,0.15)',c1:'rgba(0,0,0,0)'},
@@ -229,7 +228,7 @@ function makeFloorTex(){
       ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
     });
 
-    // ── Epoxy swirl veins — copper + rose gold ─────────────────────────────
+    // -- Epoxy swirl veins - copper + rose gold -----------------------------
     const swirlColors = [
       'rgba(200,130,70,VAL)',   // copper
       'rgba(212,145,158,VAL)',  // rose gold
@@ -275,7 +274,7 @@ function makeFloorTex(){
       ctx.stroke();
     }
 
-    // ── Glitter / galaxy stars ─────────────────────────────────────────────
+    // -- Glitter / galaxy stars ---------------------------------------------
     for(let i=0;i<1800;i++){
       const sx=Math.random()*W, sy=Math.random()*H;
       const sr=Math.random()*1.4;
@@ -289,7 +288,7 @@ function makeFloorTex(){
       ctx.fillStyle=starCol; ctx.fill();
     }
 
-    // ── Bright copper + rose gold glitter specks ───────────────────────────
+    // -- Bright copper + rose gold glitter specks ---------------------------
     for(let i=0;i<320;i++){
       const gx=Math.random()*W, gy=Math.random()*H;
       const gr=0.6+Math.random()*2.2;
@@ -307,7 +306,7 @@ function makeFloorTex(){
       ctx.beginPath(); ctx.arc(gx,gy,gr*3,0,Math.PI*2); ctx.fill();
     }
 
-    // ── Epoxy resin "cell" blobs — depth effect ───────────────────────────
+    // -- Epoxy resin "cell" blobs - depth effect ---------------------------
     for(let i=0;i<18;i++){
       const bx=Math.random()*W, by=Math.random()*H;
       const br=30+Math.random()*120;
@@ -330,7 +329,7 @@ function makeFloorTex(){
       ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
     }
 
-    // ── Rose gold dado edge glow (floor perimeter) ────────────────────────
+    // -- Rose gold dado edge glow (floor perimeter) ------------------------
     const edgeGlow=ctx.createLinearGradient(0,0,0,H);
     edgeGlow.addColorStop(0,   'rgba(212,145,158,0.12)');
     edgeGlow.addColorStop(0.08,'rgba(212,145,158,0)');
@@ -344,7 +343,7 @@ function makeFloorTex(){
     edgeGlow2.addColorStop(1,   'rgba(200,130,70,0.10)');
     ctx.fillStyle=edgeGlow2; ctx.fillRect(0,0,W,H);
 
-    // ── Final gloss overlay — epoxy wet-look sheen ────────────────────────
+    // -- Final gloss overlay - epoxy wet-look sheen ------------------------
     const gloss=ctx.createRadialGradient(W*0.38,H*0.3,0,W*0.5,H*0.5,W*0.7);
     gloss.addColorStop(0,  'rgba(255,220,180,0.06)');
     gloss.addColorStop(0.4,'rgba(220,160,100,0.03)');
@@ -368,7 +367,7 @@ function makeCeilTex(){
       ctx.strokeStyle='rgba(215,155,160,0.50)'; ctx.lineWidth=3.5; ctx.strokeRect(x,y,w,h);
       ctx.strokeStyle='rgba(183,110,121,0.18)'; ctx.lineWidth=1.5; ctx.strokeRect(x+16,y+16,w-32,h-32);
     }
-    // LED strip glows along every rib — horizontal
+    // LED strip glows along every rib - horizontal
     for(let r=0;r<=rows;r++){
       const gy=r*ch;
       const lg=ctx.createLinearGradient(0,gy-18,0,gy+18);
@@ -396,7 +395,7 @@ function makeCeilTex(){
   });
 }
 
-// ─── ROOM ─────────────────────────────────────────────────────────────────────
+// --- ROOM ---------------------------------------------------------------------
 const RW=30,RH=11,RD=28;
 const FY=-1.7, CY=FY+RH; // floor Y, ceil Y
 
@@ -430,7 +429,7 @@ const _LEDM=new THREE.MeshStandardMaterial({color:0xFFEDD0,emissive:0xFFE4B0,emi
   lt.position.set(lx,CY-0.045,lz); scene.add(lt);
 });
 
-// Walls — explicit rotation, no Object.assign shortcuts
+// Walls - explicit rotation, no Object.assign shortcuts
 const backWall=new THREE.Mesh(new THREE.PlaneGeometry(RW,RH),new THREE.MeshStandardMaterial({map:makeWallTex(2048,1024,5,2),roughness:0.88,metalness:0.05}));
 backWall.position.set(0,FY+RH/2,-RD/2); scene.add(backWall);
 
@@ -443,7 +442,7 @@ leftWall.rotation.y=Math.PI/2; leftWall.position.set(-RW/2,FY+RH/2,0); scene.add
 const rightWall=new THREE.Mesh(new THREE.PlaneGeometry(RD,RH),new THREE.MeshStandardMaterial({map:makeWallTex(2048,1024,5,2),roughness:0.88}));
 rightWall.rotation.y=-Math.PI/2; rightWall.position.set(RW/2,FY+RH/2,0); scene.add(rightWall);
 
-// Molding — rose-gold baseboard + dado rail + crown geometry
+// Molding - rose-gold baseboard + dado rail + crown geometry
 const _RGMTL=new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.94,emissive:0x3a1810,emissiveIntensity:0.16});
 const _DRKM=new THREE.MeshStandardMaterial({color:0x080303,roughness:0.88});
 const DADO_Y=FY+RH*0.38;
@@ -471,7 +470,7 @@ moldPositions.forEach(({x,z,ry,len})=>{
   crF.position.set(x,CY-0.04,z); crF.rotation.y=ry; scene.add(crF);
 });
 
-// ─── LIGHTING ─────────────────────────────────────────────────────────────────
+// --- LIGHTING -----------------------------------------------------------------
 scene.add(new THREE.AmbientLight(0xffe0d0,5.0));
 const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
 // Recessed ceiling spots
@@ -481,30 +480,30 @@ const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY
   const pl=new THREE.PointLight(0xffe8b0,3.2,26); pl.position.set(x,CY-0.35,z); pl.castShadow=true; scene.add(pl);
 });
 
-// ─── LOGO — BACK WALL ONLY ────────────────────────────────────────────────────
+// --- LOGO - BACK WALL ONLY ----------------------------------------------------
 function makeLogoTex(){
   return mkTex(4800,1600,(ctx,W,H)=>{
     ctx.clearRect(0,0,W,H);
     const cx=W/2;
 
-    // ── Background — deep noir with subtle warm vignette ──────────────────────
+    // -- Background - deep noir with subtle warm vignette ----------------------
     const bgG=ctx.createRadialGradient(cx,H*0.55,0,cx,H*0.55,W*0.62);
     bgG.addColorStop(0,'rgba(18,6,8,0.0)');
     bgG.addColorStop(0.45,'rgba(12,4,6,0.0)');
     bgG.addColorStop(1,'rgba(4,1,2,0.0)');
     ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
 
-    // ── Crosshair icon — premium metallic, NO shadowBlur ─────────────────────
+    // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
     const iconX=cx-1090, iconY=H*0.50, iconR=280;
     ctx.shadowBlur=0;
 
-    // 3D depth rings — layered shadow for emboss feel
+    // 3D depth rings - layered shadow for emboss feel
     for(let i=22;i>0;i--){
       ctx.strokeStyle=`rgba(40,10,14,${i/22*0.18})`; ctx.lineWidth=i*4.5;
       ctx.beginPath(); ctx.arc(iconX,iconY,iconR,0,Math.PI*2); ctx.stroke();
     }
 
-    // Primary metallic ring — copper-to-rose-gold swept gradient
+    // Primary metallic ring - copper-to-rose-gold swept gradient
     const circG=ctx.createLinearGradient(iconX-iconR,iconY-iconR,iconX+iconR,iconY+iconR);
     circG.addColorStop(0,   '#4a1e26'); // deep shadow edge
     circG.addColorStop(0.08,'#7a3828'); // dark copper
@@ -518,7 +517,7 @@ function makeLogoTex(){
     ctx.strokeStyle=circG; ctx.lineWidth=36; ctx.shadowBlur=0;
     ctx.beginPath(); ctx.arc(iconX,iconY,iconR,0,Math.PI*2); ctx.stroke();
 
-    // Specular highlight arc — top-left catch
+    // Specular highlight arc - top-left catch
     const specArc=ctx.createLinearGradient(iconX-iconR,iconY-iconR,iconX,iconY);
     specArc.addColorStop(0,'rgba(255,235,200,0.0)');
     specArc.addColorStop(0.3,'rgba(255,240,210,0.65)');
@@ -531,7 +530,7 @@ function makeLogoTex(){
     ctx.strokeStyle='rgba(185,118,58,0.50)'; ctx.lineWidth=14; ctx.shadowBlur=0;
     ctx.beginPath(); ctx.arc(iconX,iconY,iconR*0.62,0,Math.PI*2); ctx.stroke();
 
-    // Crosshair lines — tapered copper
+    // Crosshair lines - tapered copper
     [[1,0],[0,1]].forEach(([dx,dy])=>{
       const cg=ctx.createLinearGradient(
         iconX-iconR*dx,iconY-iconR*dy,
@@ -549,7 +548,7 @@ function makeLogoTex(){
       ctx.stroke();
     });
 
-    // Tick marks — precision instrument feel
+    // Tick marks - precision instrument feel
     ctx.strokeStyle='rgba(210,148,72,0.80)'; ctx.lineWidth=9; ctx.shadowBlur=0;
     [-1,1].forEach(dir=>{
       [0.76,0.87,0.96].forEach(d=>{
@@ -558,7 +557,7 @@ function makeLogoTex(){
       });
     });
 
-    // House silhouette — layered metallic build
+    // House silhouette - layered metallic build
     const hx=iconX, hy=iconY+32;
     const hScale=1.85;
 
@@ -571,7 +570,7 @@ function makeLogoTex(){
     ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.rect(hx-52*hScale,hy-40*hScale,104*hScale,92*hScale); ctx.fill();
 
-    // Roof — swept copper gradient
+    // Roof - swept copper gradient
     const roofG=ctx.createLinearGradient(hx-65*hScale,hy-115*hScale,hx+65*hScale,hy-36*hScale);
     roofG.addColorStop(0,'#5a2028'); roofG.addColorStop(0.25,'#c07840');
     roofG.addColorStop(0.55,'#ecb488'); roofG.addColorStop(1,'#883828');
@@ -591,7 +590,7 @@ function makeLogoTex(){
     ctx.lineTo(hx-32*hScale,hy-60*hScale);
     ctx.closePath(); ctx.fill();
 
-    // Body — rose gold to copper
+    // Body - rose gold to copper
     const bodyG=ctx.createLinearGradient(hx-50*hScale,hy-38*hScale,hx+50*hScale,hy+52*hScale);
     bodyG.addColorStop(0,'#cc7e8c'); bodyG.addColorStop(0.45,'#a85848'); bodyG.addColorStop(1,'#682828');
     ctx.fillStyle=bodyG;
@@ -603,34 +602,34 @@ function makeLogoTex(){
     ctx.fillStyle=chimG;
     ctx.beginPath(); ctx.rect(hx+16*hScale,hy-128*hScale,22*hScale,56*hScale); ctx.fill();
 
-    // Door — arched top
+    // Door - arched top
     ctx.fillStyle='rgba(4,1,2,0.94)';
     ctx.beginPath();
     ctx.arc(hx,hy+20*hScale,16*hScale,Math.PI,0);
     ctx.rect(hx-16*hScale,hy+20*hScale,32*hScale,34*hScale);
     ctx.fill();
 
-    // Window — left
+    // Window - left
     ctx.fillStyle='rgba(255,210,140,0.18)';
     ctx.strokeStyle='rgba(200,135,65,0.70)'; ctx.lineWidth=4;
     ctx.beginPath(); ctx.rect(hx-42*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
 
-    // Window — right
+    // Window - right
     ctx.beginPath(); ctx.rect(hx+20*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
 
-    // ── TRUESITE text — full premium metallic render ──────────────────────────
+    // -- TRUESITE text - full premium metallic render --------------------------
     const FONT_SIZE = 360;
     ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
     const tx=cx-186, ty=H*0.60;
 
-    // 3D extrusion — 18 layers
+    // 3D extrusion - 18 layers
     for(let i=18;i>0;i--){
       ctx.fillStyle=`rgba(16,4,6,${0.34-i*0.016})`;
       ctx.shadowBlur=0;
       ctx.fillText('TRUESITE',tx+i*2.8,ty+i*2.2);
     }
 
-    // Main metallic fill gradient — vertical sweep
+    // Main metallic fill gradient - vertical sweep
     const tg=ctx.createLinearGradient(tx,ty-FONT_SIZE*1.05,tx,ty+FONT_SIZE*0.12);
     tg.addColorStop(0,   '#3a1218'); // shadow crown
     tg.addColorStop(0.06,'#7a3828'); // deep copper
@@ -644,7 +643,7 @@ function makeLogoTex(){
     ctx.fillStyle=tg; ctx.shadowBlur=0;
     ctx.fillText('TRUESITE',tx,ty);
 
-    // Specular highlight stroke — top edge light catch
+    // Specular highlight stroke - top edge light catch
     const hiG=ctx.createLinearGradient(tx,ty-FONT_SIZE,tx+2800,ty-FONT_SIZE);
     hiG.addColorStop(0,  'rgba(245,210,165,0)');
     hiG.addColorStop(0.1,'rgba(255,232,195,0.45)');
@@ -654,7 +653,7 @@ function makeLogoTex(){
     ctx.strokeStyle=hiG; ctx.lineWidth=2.0; ctx.shadowBlur=0;
     ctx.strokeText('TRUESITE',tx,ty);
 
-    // Second pass specular — mid-body sheen band
+    // Second pass specular - mid-body sheen band
     ctx.save();
     ctx.globalAlpha=0.22;
     const midG=ctx.createLinearGradient(tx,ty-FONT_SIZE*0.55,tx,ty-FONT_SIZE*0.35);
@@ -665,7 +664,7 @@ function makeLogoTex(){
     ctx.fillText('TRUESITE',tx,ty);
     ctx.restore();
 
-    // ── TECHNOLOGIES subtext ─────────────────────────────────────────────────
+    // -- TECHNOLOGIES subtext -------------------------------------------------
     const SUB_SIZE=148;
     ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
     const subx=cx-188, suby=ty+160;
@@ -688,7 +687,7 @@ function makeLogoTex(){
     ctx.strokeStyle='rgba(245,200,155,0.28)'; ctx.lineWidth=1.4; ctx.shadowBlur=0;
     ctx.strokeText('TECHNOLOGIES',subx,suby);
 
-    // ── UNDERGLOW — multi-layer premium backlight ─────────────────────────────
+    // -- UNDERGLOW - multi-layer premium backlight -----------------------------
     // Deep radial halo
     const ugHalo=ctx.createRadialGradient(cx,H*0.72,0,cx,H*0.72,W*0.55);
     ugHalo.addColorStop(0,'rgba(210,130,85,0.32)');
@@ -724,7 +723,7 @@ function makeLogoTex(){
     roseStrip.addColorStop(1,   'rgba(215,148,162,0)');
     ctx.fillStyle=roseStrip; ctx.fillRect(cx-1280,H*0.812,2560,22);
 
-    // LED strip — the hot white line itself
+    // LED strip - the hot white line itself
     const ledLine=ctx.createLinearGradient(cx-1160,0,cx+1160,0);
     ledLine.addColorStop(0,  'rgba(255,230,200,0)');
     ledLine.addColorStop(0.18,'rgba(255,228,188,0.96)');
@@ -744,11 +743,11 @@ const logoPlane=new THREE.Mesh(
 logoPlane.position.set(0,FY+RH*0.58,-RD/2+0.12); scene.add(logoPlane);
 const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.57,-RD/2+1.5); scene.add(logoGlow);
 
-// ── Front wall (opposite logo wall) — grant proposal video screen ─────────────
+// -- Front wall (opposite logo wall) - grant proposal video screen -------------
 const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/292ae2382_30011ed43_Rose_Gold_Logo_Animation_Generated.mp4');
 // Front wall faces inward: rotation.y = Math.PI, z = RD/2
-// addScreen(tex, w, h, px, py, pz, ry) — handles offset + bezel automatically
-// Front wall manual placement — addScreen offset logic doesn't work for front wall
+// addScreen(tex, w, h, px, py, pz, ry) - handles offset + bezel automatically
+// Front wall manual placement - addScreen offset logic doesn't work for front wall
 (function(){
   const w=RW*0.80, h=RH*0.55;
   const px=0, py=FY+RH*0.52, pz=RD/2;
@@ -770,9 +769,9 @@ bwGlow.position.set(0, FY+RH*0.52, RD/2-1.5);
 scene.add(bwGlow);
 
 
-// ─── SCREEN CONTENT ───────────────────────────────────────────────────────────
+// --- SCREEN CONTENT -----------------------------------------------------------
 
-// ── Logo image loader → CanvasTexture ────────────────────────────────────────
+// -- Logo image loader - CanvasTexture ----------------------------------------
 function makeLogoScreen(imgUrl, label, accentCol) {
   const W=640,H=400;
   const canvas=mkCanvas(W,H);
@@ -817,13 +816,13 @@ function makeLogoScreen(imgUrl, label, accentCol) {
   return tex;
 }
 
-// ── Video texture maker ───────────────────────────────────────────────────────
+// -- Video texture maker -------------------------------------------------------
 function makeVideoTex(url) {
   const vid=document.createElement('video');
   vid.src=url; vid.crossOrigin='anonymous';
   vid.loop=true; vid.muted=true; vid.playsInline=true;
   vid.autoplay=true;
-  // Must be triggered after user gesture or autoplay policy — we attempt on load
+  // Must be triggered after user gesture or autoplay policy - we attempt on load
   const tex=new THREE.VideoTexture(vid);
   tex.colorSpace=THREE.SRGBColorSpace;
   // Try to play; browsers may block until interaction
@@ -833,10 +832,10 @@ function makeVideoTex(url) {
   return tex;
 }
 
-// ── Build all 5 left-wall screen textures ─────────────────────────────────────
+// -- Build all 5 left-wall screen textures -------------------------------------
 const airaTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/b37a34e16_95fd8b016_1769377123464.mp4');
 const ironsiteTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/1be3308cc_b325054e0_PhantomPresence.mp4');
-// NitroBial — canvas dimmer so video plays at reduced brightness
+// NitroBial - canvas dimmer so video plays at reduced brightness
 const _nitroBialVid = document.createElement('video');
 _nitroBialVid.src = 'https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/f9c9d4b8b_deb3464aa_NitroBialLogoAnimation.mp4';
 _nitroBialVid.crossOrigin='anonymous'; _nitroBialVid.loop=true; _nitroBialVid.muted=true; _nitroBialVid.playsInline=true;
@@ -846,7 +845,7 @@ _nitroCanvas.width=640; _nitroCanvas.height=360;
 const _nitroCtx = _nitroCanvas.getContext('2d');
 const nitrobialTexData = new THREE.CanvasTexture(_nitroCanvas);
 nitrobialTexData.colorSpace = THREE.SRGBColorSpace;
-// update in animation loop — registered below
+// update in animation loop - registered below
 window._nitroBialUpdate = function(){
   if(_nitroBialVid.readyState >= 2){
     _nitroCtx.clearRect(0,0,640,360);
@@ -857,7 +856,7 @@ window._nitroBialUpdate = function(){
   }
 };
 
-// ── Slot 5 — TrueSite Live Data canvas screen ─────────────────────────────
+// -- Slot 5 - TrueSite Live Data canvas screen -----------------------------
 function mkGrantScreen(){
   return mkTex(640,400,(ctx,W,H)=>{
     ctx.fillStyle='#020408'; ctx.fillRect(0,0,W,H);
@@ -865,10 +864,10 @@ function mkGrantScreen(){
     ctx.fillStyle='rgba(200,120,60,0.18)'; ctx.fillRect(0,0,W,38);
     ctx.fillStyle='rgba(200,120,60,0.9)'; ctx.font='bold 14px Courier New';
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText('TRUESITE — LIVE OPERATIONS', 12, 19);
+    ctx.fillText('TRUESITE // LIVE OPERATIONS', 12, 19);
     ctx.fillStyle='rgba(100,200,100,0.9)'; ctx.font='11px Courier New';
     ctx.textAlign='right';
-    ctx.fillText('● CONNECTED', W-10, 19);
+    ctx.fillText('\u25CF CONNECTED', W-10, 19);
     // horizontal rule
     ctx.strokeStyle='rgba(200,120,60,0.4)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(0,38); ctx.lineTo(W,38); ctx.stroke();
@@ -898,14 +897,14 @@ function mkGrantScreen(){
     // footer
     ctx.fillStyle='rgba(80,80,100,0.6)'; ctx.font='10px Courier New';
     ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText('SOVEREIGN INFRASTRUCTURE — TRUESITE v2.0', W/2, H-6);
+    ctx.fillText('SOVEREIGN INFRASTRUCTURE -- TRUESITE v2.0', W/2, H-6);
   });
 }
 const mkGrantScreenTex = mkGrantScreen;
 const kjoTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/353057817_1c4c5042e_1769377123464.mp4');
 const videoTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/23a98b54b_34ffffbfa_Animated_Rose_Gold_Logo_Creation.mp4');
 
-// ── Right wall small screens (site data) ──────────────────────────────────────
+// -- Right wall small screens (site data) --------------------------------------
 function mkMapScreen(){
   return mkTex(640,400,(ctx,W,H)=>{
     ctx.fillStyle='#030408'; ctx.fillRect(0,0,W,H);
@@ -918,9 +917,9 @@ function mkMapScreen(){
     ctx.shadowBlur=0; ctx.strokeStyle='rgba(212,145,158,0.4)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
     ctx.beginPath(); ctx.arc(320,200,72,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle='rgba(40,120,255,0.9)'; ctx.font='bold 14px Courier New'; ctx.textAlign='left'; ctx.textBaseline='top'; ctx.shadowBlur=0;
-    ctx.fillText('SITE MAP — LIVE',12,12);
+    ctx.fillText('SITE MAP -- LIVE',12,12);
     ctx.fillStyle='rgba(40,120,255,0.6)'; ctx.font='11px Courier New'; ctx.textBaseline='bottom';
-    ctx.fillText('33.4484°N  112.0740°W',12,H-8);
+    ctx.fillText('33.4484\u00B0N  112.0740\u00B0W',12,H-8);
   });
 }
 function mkSatScreen(){
@@ -935,7 +934,7 @@ function mkSatScreen(){
     ctx.strokeStyle='rgba(212,145,158,0.4)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
     ctx.beginPath(); ctx.arc(210,122,55,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle='rgba(0,220,100,0.9)'; ctx.font='bold 14px Courier New'; ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText('SATELLITE — LIVE FEED',12,12);
+    ctx.fillText('SATELLITE -- LIVE FEED',12,12);
     ctx.fillStyle='rgba(0,220,100,0.6)'; ctx.font='11px Courier New'; ctx.textBaseline='bottom';
     ctx.fillText('TARGET: 1402 W MAPLE DR',12,H-8);
   });
@@ -954,14 +953,14 @@ function mkThermalScreen(){
     ctx.fillStyle='rgba(255,200,0,0.9)'; ctx.font='bold 14px Courier New'; ctx.textAlign='left'; ctx.textBaseline='top';
     ctx.fillText('THERMAL IMAGING',12,12);
     ctx.fillStyle='rgba(255,200,0,0.6)'; ctx.font='11px Courier New'; ctx.textBaseline='bottom';
-    ctx.fillText('MAX: 112°F  |  ANOMALY: ZONE A3',12,H-8);
+    ctx.fillText('MAX: 112\u00B0F  |  ANOMALY: ZONE A3',12,H-8);
   });
 }
 const mapTexData=mkMapScreen();
 const satTexData=mkSatScreen();
 const thermalTexData=mkThermalScreen();
 
-// ── Knowledge graph — LIVE animated canvas ────────────────────────────────────
+// -- Knowledge graph - LIVE animated canvas ------------------------------------
 const KGW=960,KGH=640;
 const kgCanvas=mkCanvas(KGW,KGH);
 const kgCtx=kgCanvas.getContext('2d');
@@ -1004,24 +1003,24 @@ function drawKG(t){
     kgCtx.fillText(n.label,n.x,n.y);
   });
   kgCtx.fillStyle='rgba(212,145,158,0.92)'; kgCtx.font='bold 20px Courier New'; kgCtx.textAlign='left'; kgCtx.textBaseline='top';
-  kgCtx.fillText('⬡ KNOWLEDGE GRAPH — LIVE',14,14);
+  kgCtx.fillText('\u2B21 KNOWLEDGE GRAPH -- LIVE',14,14);
   kgCtx.fillStyle='rgba(80,200,80,0.75)'; kgCtx.font='12px Courier New';
   kgCtx.fillText(`NODES:${KG_NODES.length}  EDGES:${KG_EDGES.length}  ${new Date().toLocaleTimeString()}`,14,40);
   kgTex.needsUpdate=true;
 }
 
-// ─── BEZEL HELPER ─────────────────────────────────────────────────────────────
+// --- BEZEL HELPER -------------------------------------------------------------
 function addScreen(tex,w,h,px,py,pz,ry){
   // Offset direction based on wall orientation so screen sits proud of wall
   const offX=Math.abs(ry)>0.1?(ry>0?0.06:-0.06):0;
   const offZ=Math.abs(ry)<0.1?0.06:0;
-  // Screen plane — sits proud
+  // Screen plane - sits proud
   const s=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,toneMapped:false}));
   s.position.set(px+offX,py,pz+offZ); s.rotation.y=ry; scene.add(s);
-  // bezel back — sits behind screen
+  // bezel back - sits behind screen
   const bk=new THREE.Mesh(new THREE.BoxGeometry(w+0.22,h+0.22,0.09),darkMat(0x060202));
   bk.position.set(px,py,pz); bk.rotation.y=ry; scene.add(bk);
-  // rose-gold bezel frame — surrounds
+  // rose-gold bezel frame - surrounds
   const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.34,h+0.34,0.06),rgMat(0.4));
   fr.position.set(px,py,pz); fr.rotation.y=ry; scene.add(fr);
   // glow
@@ -1031,15 +1030,15 @@ function addScreen(tex,w,h,px,py,pz,ry){
   return s;
 }
 
-// ─── RIGHT WALL — BIG KG + 3 SMALL ───────────────────────────────────────────
-// Big KG screen — dominant, right wall center-top
+// --- RIGHT WALL - BIG KG + 3 SMALL -------------------------------------------
+// Big KG screen - dominant, right wall center-top
 addScreen(kgTex,   12,8,   RW/2-0.12, FY+RH*0.64, -3,   -Math.PI/2);
-// 3 smaller screens — evenly spaced below on right wall
+// 3 smaller screens - evenly spaced below on right wall
 addScreen(mapTexData,    4.5,2.85, RW/2-0.12, FY+RH*0.27, -10, -Math.PI/2);
 addScreen(satTexData,    4.5,2.85, RW/2-0.12, FY+RH*0.27,  -3, -Math.PI/2);
 addScreen(thermalTexData,4.5,2.85, RW/2-0.12, FY+RH*0.27,   5, -Math.PI/2);
 
-// ─── LEFT WALL — TOP ROW: 5 PANEL TVs + BOTTOM: 1 WIDE TV ─────────────────────
+// --- LEFT WALL - TOP ROW: 5 PANEL TVs + BOTTOM: 1 WIDE TV ---------------------
 // Wall depth = RD=28, so Z spans from -14 to +14
 // 5 top-row screens evenly spaced across the wall
 const LW_TOPS=[
@@ -1056,12 +1055,12 @@ LW_TOPS.forEach(({tex,z})=>{
 // Bottom: one wide map screen (left wall, lower half)
 addScreen(mapTexData, 13,4.2, -RW/2+0.12, FY+RH*0.3, 0, Math.PI/2);
 
-// ─── ROUND TABLE — Cherry Oak Executive ───────────────────────────────────────
+// --- ROUND TABLE - Cherry Oak Executive ---------------------------------------
 const TABLE_Y=0;
 
-// ── Black marbleized cherry oak surface ──────────────────────────────────────
+// -- Black marbleized cherry oak surface --------------------------------------
 const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
-  // Deep obsidian base — almost black with warm undertone
+  // Deep obsidian base - almost black with warm undertone
   const base=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.72);
   base.addColorStop(0,'#1a0805');
   base.addColorStop(0.35,'#110503');
@@ -1069,7 +1068,7 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
   base.addColorStop(1,'#060101');
   ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
 
-  // Cherry oak grain — visible but dark, warm red-brown under the black
+  // Cherry oak grain - visible but dark, warm red-brown under the black
   ctx.save(); ctx.translate(W/2,H/2);
   for(let a=0;a<Math.PI*2;a+=0.014){
     const len=W*0.53+Math.random()*W*0.05;
@@ -1081,12 +1080,12 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
   }
   ctx.restore();
 
-  // Black marble veining — bold sweeping veins across the surface
+  // Black marble veining - bold sweeping veins across the surface
   function drawVein(sx,sy,angle,length,width,alpha,color){
     ctx.save();
     ctx.translate(sx,sy); ctx.rotate(angle);
     ctx.beginPath(); ctx.moveTo(0,0);
-    // Bezier vein — natural flowing curve
+    // Bezier vein - natural flowing curve
     const cp1x=length*0.25+Math.random()*80-40;
     const cp1y=(Math.random()-0.5)*120;
     const cp2x=length*0.65+Math.random()*80-40;
@@ -1101,7 +1100,7 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
     ctx.restore(); ctx.globalAlpha=1;
   }
 
-  // Primary veins — deep charcoal/grey marble veins
+  // Primary veins - deep charcoal/grey marble veins
   const veins=[
     [W*0.1,H*0.2, 0.22, W*0.85, 6,  0.72, '#1c1c1c'],
     [W*0.05,H*0.6, 0.08, W*0.9,  5,  0.65, '#222222'],
@@ -1113,7 +1112,7 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
   ];
   veins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
 
-  // Warm gold/amber micro-veins — cherry wood bleeding through marble
+  // Warm gold/amber micro-veins - cherry wood bleeding through marble
   const warmVeins=[
     [W*0.25,H*0.3,  0.28, W*0.5, 1.8, 0.35, 'rgba(120,50,15,0.4)'],
     [W*0.55,H*0.15, 0.42, W*0.45,1.5, 0.28, 'rgba(100,38,10,0.35)'],
@@ -1122,7 +1121,7 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
   ];
   warmVeins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
 
-  // White marble highlight veins — thin bright lines
+  // White marble highlight veins - thin bright lines
   const whiteVeins=[
     [W*0.15,H*0.35, 0.20, W*0.6,  1.2, 0.22, 'rgba(200,195,190,0.5)'],
     [W*0.4, H*0.08, 0.45, W*0.5,  0.8, 0.18, 'rgba(210,205,200,0.45)'],
@@ -1130,7 +1129,7 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
   ];
   whiteVeins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
 
-  // High-gloss lacquer sheen — strong specular highlight (top-left source)
+  // High-gloss lacquer sheen - strong specular highlight (top-left source)
   const sheen=ctx.createRadialGradient(W*0.3,H*0.25,0,W/2,H/2,W*0.7);
   sheen.addColorStop(0,'rgba(255,240,220,0.22)');
   sheen.addColorStop(0.2,'rgba(200,180,160,0.10)');
@@ -1145,25 +1144,25 @@ const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
   ctx.fillStyle=edge; ctx.fillRect(0,0,W,H);
 });
 
-// ── Cherry oak material ───────────────────────────────────────────────────────
+// -- Cherry oak material -------------------------------------------------------
 const cherryOak=new THREE.MeshStandardMaterial({
   map:tableSurface,
-  roughness:0.06,       // polished marble + lacquer — mirror-like
+  roughness:0.06,       // polished marble + lacquer -- mirror-like
   metalness:0.08,
   color:0xffffff        // let texture drive color fully
 });
 
-// ── Table top — thick slab (0.42 units = ~4 inches) ─────────────────────────
+// -- Table top - thick slab (0.42 units = ~4 inches) -------------------------
 const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.42,128),cherryOak);
 tTop.position.y=TABLE_Y; tTop.receiveShadow=true; tTop.castShadow=true; scene.add(tTop);
 
-// ── Table edge band — engraved sequence 3-5-6-5-3-6-9-9-6-3 ─────────────────
+// -- Table edge band - engraved sequence 3-5-6-5-3-6-9-9-6-3 -----------------
 // Each character illuminates one by one, cycling around the full circumference
-const SEQUENCE='3·5·6·5·3·6·9·9·6·3·';
+const SEQUENCE='3|5|6|5|3|6|9|9|6|3|';
 const EDGE_W=4096, EDGE_H=160;
 const EDGE_FONT=`bold ${Math.round(EDGE_H*0.52)}px Georgia,serif`;
 
-// ── Off-screen measurement canvas ────────────────────────────────────────────
+// -- Off-screen measurement canvas --------------------------------------------
 const _emx=(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;return c.getContext('2d');})();
 _emx.font=EDGE_FONT;
 
@@ -1187,7 +1186,7 @@ const TOTAL_CHARS=edgeChars.length;
 // Seconds for one full lap around all chars
 const LAP_SECS=20;
 
-// ── Live draw canvas (redrawn every frame) ───────────────────────────────────
+// -- Live draw canvas (redrawn every frame) -----------------------------------
 const edgeLiveCanvas=document.createElement('canvas');
 edgeLiveCanvas.width=EDGE_W; edgeLiveCanvas.height=EDGE_H;
 const elx=edgeLiveCanvas.getContext('2d');
@@ -1205,8 +1204,8 @@ edgeBand.position.y=TABLE_Y; scene.add(edgeBand);
 let _edgeLastIdx=-1;
 
 function drawEdgeBand(t,dt){
-  // Continuous fractional position — NO floor/snap, moves fluidly
-  const progress=(t%LAP_SECS)/LAP_SECS;   // 0.0 → 1.0 continuously
+  // Continuous fractional position - NO floor/snap, moves fluidly
+  const progress=(t%LAP_SECS)/LAP_SECS;   // 0.0 -> 1.0 continuously
   const activePos=progress*TOTAL_CHARS;    // fractional index, e.g. 47.63
 
   // Throttle redraws to ~30fps max (no need faster for smooth look)
@@ -1215,10 +1214,10 @@ function drawEdgeBand(t,dt){
 
   elx.clearRect(0,0,EDGE_W,EDGE_H);
 
-  // ── Pitch-black base ──────────────────────────────────────────────────────
+  // -- Pitch-black base ------------------------------------------------------
   elx.fillStyle='#050101'; elx.fillRect(0,0,EDGE_W,EDGE_H);
 
-  // Carved border lines top & bottom (static — drawn once per frame, fast)
+  // Carved border lines top & bottom (static - drawn once per frame, fast)
   [EDGE_H*0.10, EDGE_H*0.90].forEach(gy=>{
     elx.beginPath(); elx.moveTo(0,gy); elx.lineTo(EDGE_W,gy);
     elx.strokeStyle='rgba(0,0,0,0.75)'; elx.lineWidth=3; elx.stroke();
@@ -1226,8 +1225,8 @@ function drawEdgeBand(t,dt){
     elx.strokeStyle='rgba(140,100,70,0.10)'; elx.lineWidth=1; elx.stroke();
   });
 
-  // ── Smooth brightness falloff function ────────────────────────────────────
-  // Uses a cosine bell curve — peaks at dist=0, smoothly falls to 0 at dist=WINDOW
+  // -- Smooth brightness falloff function ------------------------------------
+  // Uses a cosine bell curve - peaks at dist=0, smoothly falls to 0 at dist=WINDOW
   const WINDOW=6; // how many chars on each side the glow reaches
   function brightness(i){
     // Signed fractional distance from the active position (wrap-aware)
@@ -1237,22 +1236,22 @@ function drawEdgeBand(t,dt){
     if(d<-TOTAL_CHARS/2) d+=TOTAL_CHARS;
     const absd=Math.abs(d);
     if(absd>=WINDOW) return 0;
-    // Cosine ease: 1.0 at center → 0.0 at WINDOW
+    // Cosine ease: 1.0 at center - 0.0 at WINDOW
     return 0.5*(1+Math.cos(Math.PI*absd/WINDOW));
   }
 
-  // ── Draw all characters ────────────────────────────────────────────────────
+  // -- Draw all characters ----------------------------------------------------
   elx.font=EDGE_FONT;
   elx.textBaseline='middle';
   const cy=EDGE_H*0.5;
 
   for(let i=0;i<edgeChars.length;i++){
     const {char,x,w}=edgeChars[i];
-    const b=brightness(i); // 0.0 → 1.0
+    const b=brightness(i); // 0.0 -> 1.0
 
     if(b>0.01){
-      // ── Illuminated range ────────────────────────────────────────────────
-      // Halo glow — scales with brightness
+      // -- Illuminated range ------------------------------------------------
+      // Halo glow - scales with brightness
       if(b>0.3){
         const halo=elx.createRadialGradient(x+w/2,cy,0,x+w/2,cy,w*2.2);
         halo.addColorStop(0,`rgba(255,248,190,${(b*0.45).toFixed(3)})`);
@@ -1264,10 +1263,10 @@ function drawEdgeBand(t,dt){
       // Carve shadow (always present for depth)
       elx.fillStyle=`rgba(0,0,0,0.80)`;
       elx.fillText(char,x+1.5,cy+1.8);
-      // Gold-white character — brightness drives opacity and warmth
+      // Gold-white character - brightness drives opacity and warmth
       const r=Math.round(255);
-      const g=Math.round(200+b*52);   // 200→252 as b→1
-      const bch=Math.round(80+b*130); // 80→210 as b→1
+      const g=Math.round(200+b*52);   // 200->252 as b->1
+      const bch=Math.round(80+b*130); // 80->210 as b->1
       elx.fillStyle=`rgba(${r},${g},${bch},${(0.15+b*0.85).toFixed(3)})`;
       elx.fillText(char,x,cy);
       // Specular highlight at peak only
@@ -1276,7 +1275,7 @@ function drawEdgeBand(t,dt){
         elx.fillText(char,x-0.6,cy-0.7);
       }
     } else {
-      // ── Dark / engraved — invisible base with faint carved edge ──────────
+      // -- Dark / engraved - invisible base with faint carved edge ----------
       elx.fillStyle='rgba(0,0,0,0.80)';
       elx.fillText(char,x+1.4,cy+1.6);
       elx.fillStyle='rgba(6,2,1,0.92)';
@@ -1289,19 +1288,19 @@ function drawEdgeBand(t,dt){
   edgeTex.needsUpdate=true;
 }
 
-// ── Top edge bevel ring — thin beveled lip ────────────────────────────────────
+// -- Top edge bevel ring - thin beveled lip ------------------------------------
 const bevelMat=new THREE.MeshStandardMaterial({color:0x3a1008,roughness:0.12,metalness:0.06});
 const tBevel=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.055,14,120),bevelMat);
 tBevel.rotation.x=Math.PI/2; tBevel.position.y=TABLE_Y+0.21; scene.add(tBevel);
 const tBevelB=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.04,10,120),bevelMat);
 tBevelB.rotation.x=Math.PI/2; tBevelB.position.y=TABLE_Y-0.21; scene.add(tBevelB);
 
-// ── Top bevel rim — Hebrew engraved scripture Acts 4:12 ──────────────────────
+// -- Top bevel rim - Hebrew engraved scripture Acts 4:12 ----------------------
 // The scripture wraps the entire cherry-red torus bevel at the top edge
-// וְאֵין הַיְשׁוּעָה בְּאַחֵר כִּי לֹא נִתַּן תַּחַת הַשָּׁמַיִם שֵׁם אַחֵר לִבְנֵי אָדָם אֲשֶׁר־בּוֹ נִוָּשֵׁעַ
-const SCRIPTURE_HEB='וְאֵין הַיְשׁוּעָה בְּאַחֵר כִּי לֹא נִתַּן תַּחַת הַשָּׁמַיִם שֵׁם אַחֵר לִבְנֵי אָדָם אֲשֶׁר־בּוֹ נִוָּשֵׁעַ ✦ ';
+// ------ ----------- -------- ---- --- ------ ------ ----------- ---- ----- ------- ----- ----------- ----------
+const SCRIPTURE_HEB='\u05D5\u05B0\u05D0\u05B5\u05D9\u05DF \u05D4\u05B7\u05D9\u05B0\u05E9\u05C1\u05D5\u05BC\u05E2\u05B8\u05D4 \u05D1\u05B0\u05BC\u05D0\u05B7\u05D7\u05B5\u05E8 \u05DB\u05B4\u05BC\u05D9 \u05DC\u05B9\u05D0 \u05E0\u05B4\u05EA\u05B7\u05BC\u05DF \u05EA\u05B7\u05BC\u05D7\u05B7\u05EA \u05D4\u05B7\u05E9\u05B8\u05BC\u05C1\u05DE\u05B7\u05D9\u05B4\u05DD \u05E9\u05B5\u05C1\u05DD \u05D0\u05B7\u05D7\u05B5\u05E8 \u05DC\u05B4\u05D1\u05B0\u05E0\u05B5\u05D9 \u05D0\u05B8\u05D3\u05B8\u05DD \u05D0\u05B2\u05E9\u05B6\u05C1\u05E8\u05BE\u05D1\u05BC\u05D5\u05B9 \u05E0\u05B4\u05D5\u05B8\u05BC\u05E9\u05B5\u05C1\u05E2\u05B7 \u2726 ';
 
-// Build the bevel texture — wraps around the torus circumference
+// Build the bevel texture - wraps around the torus circumference
 const rimTex=(()=>{
   const RW=8192, RH=192; // bigger canvas = more resolution per character
   const rc=document.createElement('canvas'); rc.width=RW; rc.height=RH;
@@ -1323,7 +1322,7 @@ const rimTex=(()=>{
     rx.strokeStyle='rgba(255,210,180,0.18)'; rx.lineWidth=1.5; rx.stroke();
   });
 
-  // Hebrew text — sized to fill most of the band height
+  // Hebrew text - sized to fill most of the band height
   const FONT_SIZE=Math.round(RH*0.55);
   rx.font=`${FONT_SIZE}px 'Times New Roman',serif`;
   rx.textBaseline='middle';
@@ -1341,16 +1340,16 @@ const rimTex=(()=>{
     const cw=rx.measureText(ch).width*0.90;
 
     // === ENGRAVED look: dark groove + strong bright highlight catch ===
-    // Shadow drop — the groove is deep
+    // Shadow drop - the groove is deep
     rx.fillStyle='rgba(0,0,0,0.95)';
     rx.fillText(ch, tx+2, RH*0.5+2.5);
 
-    // Groove floor — very dark red-brown
+    // Groove floor - very dark red-brown
     rx.fillStyle='rgba(12,3,2,1.0)';
     rx.fillText(ch, tx, RH*0.5);
 
-    // PRIMARY highlight — bright gold-white edge catch (top-left)
-    // This is what makes engraving readable — the light catches the raised edge
+    // PRIMARY highlight - bright gold-white edge catch (top-left)
+    // This is what makes engraving readable - the light catches the raised edge
     rx.fillStyle='rgba(255,220,170,0.72)';
     rx.fillText(ch, tx-1.2, RH*0.5-1.5);
 
@@ -1367,7 +1366,7 @@ const rimTex=(()=>{
   return t;
 })();
 
-// Torus — thicker tube so the scripture band is actually visible from camera
+// Torus - thicker tube so the scripture band is actually visible from camera
 const tRim=new THREE.Mesh(
   new THREE.TorusGeometry(4.46, 0.18, 32, 256),
   new THREE.MeshStandardMaterial({
@@ -1387,8 +1386,8 @@ const tRimAccent=new THREE.Mesh(
 );
 tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.22; scene.add(tRimAccent);
 
-// ── Central pedestal column — turned cherry oak ───────────────────────────────
-// Profile: wider at top & bottom, narrow waist — classic turned leg look
+// -- Central pedestal column - turned cherry oak -------------------------------
+// Profile: wider at top & bottom, narrow waist - classic turned leg look
 const pedMat=new THREE.MeshStandardMaterial({color:0x3d1209,roughness:0.22,metalness:0.02});
 // Top cap
 const tPedCapT=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.62,0.12,32),pedMat.clone());
@@ -1407,30 +1406,30 @@ tPedL.position.y=TABLE_Y-1.20; scene.add(tPedL);
 const tPedCapB=new THREE.Mesh(new THREE.CylinderGeometry(0.68,0.72,0.14,32),pedMat.clone());
 tPedCapB.position.y=TABLE_Y-1.52; scene.add(tPedCapB);
 
-// ── Four curved legs — sabre/queen anne style ─────────────────────────────────
+// -- Four curved legs - sabre/queen anne style ---------------------------------
 // Each leg: starts at pedestal base, curves outward and down
 const legAngles=[Math.PI/4, Math.PI*3/4, Math.PI*5/4, Math.PI*7/4];
 legAngles.forEach(ang=>{
   const lx=Math.cos(ang), lz=Math.sin(ang);
-  // Upper leg section — angled outward from pedestal
+  // Upper leg section - angled outward from pedestal
   const legU=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.08,0.70,16),pedMat.clone());
   legU.position.set(lx*0.85,TABLE_Y-1.72,lz*0.85);
   legU.rotation.z= Math.cos(ang)*0.32;
   legU.rotation.x=-Math.sin(ang)*0.32;
   legU.castShadow=true; scene.add(legU);
-  // Lower leg section — more outward splay
+  // Lower leg section - more outward splay
   const legL=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.055,0.65,16),pedMat.clone());
   legL.position.set(lx*1.45,TABLE_Y-2.08,lz*1.45);
   legL.rotation.z= Math.cos(ang)*0.52;
   legL.rotation.x=-Math.sin(ang)*0.52;
   legL.castShadow=true; scene.add(legL);
-  // Foot pad — brass/gold cap
+  // Foot pad - brass/gold cap
   const foot=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.12,0.07,16),
     new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.08,metalness:0.90}));
   foot.position.set(lx*1.9,TABLE_Y-2.38,lz*1.9); scene.add(foot);
 });
 
-// ── Cross stretcher — H-brace at mid-height ───────────────────────────────────
+// -- Cross stretcher - H-brace at mid-height -----------------------------------
 ['x','z'].forEach(ax=>{
   const s=new THREE.Mesh(
     new THREE.CylinderGeometry(0.055,0.055,ax==='x'?3.2:3.2,12),
@@ -1444,7 +1443,7 @@ const stretcherHub=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),
   new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.92}));
 stretcherHub.position.y=TABLE_Y-2.02; scene.add(stretcherHub);
 
-// FOL engraved overlay on table — carved groove effect
+// FOL engraved overlay on table - carved groove effect
 const folCanvas=mkCanvas(1024,1024);
 const folCtx=folCanvas.getContext('2d');
 const folTex=new THREE.CanvasTexture(folCanvas);
@@ -1457,7 +1456,7 @@ const folDisc=new THREE.Mesh(
     transparent:true,
     side:THREE.DoubleSide,
     depthWrite:false,
-    roughness:0.85,     // carved wood — not shiny
+    roughness:0.85,     // carved wood -- not shiny
     metalness:0.0,
     toneMapped:false
   })
@@ -1479,23 +1478,23 @@ function drawFOL(t){
   // Scale: R=88 matches the 512->1024 upscale of original R=44
   const R=88;
 
-  // ── Helper: draw one carved circle ──────────────────────────────────────
+  // -- Helper: draw one carved circle --------------------------------------
   function carvedCircle(cx,cy,radius,phiR,phiG,phiB,alpha){
-    // 1. Outer shadow lip — dark edge that sells the depth illusion
+    // 1. Outer shadow lip - dark edge that sells the depth illusion
     folCtx.beginPath();
     folCtx.arc(cx,cy,radius+2.5,0,Math.PI*2);
     folCtx.strokeStyle=`rgba(0,0,0,0.55)`;
     folCtx.lineWidth=5;
     folCtx.stroke();
 
-    // 2. Inner shadow — the groove floor is darker
+    // 2. Inner shadow - the groove floor is darker
     folCtx.beginPath();
     folCtx.arc(cx,cy,radius,0,Math.PI*2);
     folCtx.strokeStyle=`rgba(0,0,0,0.40)`;
     folCtx.lineWidth=6;
     folCtx.stroke();
 
-    // 3. Highlight lip on opposite side — simulates light catching the groove edge
+    // 3. Highlight lip on opposite side - simulates light catching the groove edge
     folCtx.save();
     folCtx.beginPath();
     folCtx.arc(cx,cy,radius-1,Math.PI*1.1,Math.PI*1.9);
@@ -1504,7 +1503,7 @@ function drawFOL(t){
     folCtx.stroke();
     folCtx.restore();
 
-    // 4. Phi color pulse — faint luminance inside the groove (the carved channel glows)
+    // 4. Phi color pulse - faint luminance inside the groove (the carved channel glows)
     folCtx.beginPath();
     folCtx.arc(cx,cy,radius,0,Math.PI*2);
     folCtx.strokeStyle=`rgba(${phiR},${phiG},${phiB},${alpha})`;
@@ -1512,11 +1511,11 @@ function drawFOL(t){
     folCtx.stroke();
   }
 
-  // ── Draw FOL geometry — same sacred sequence as before ──────────────────
+  // -- Draw FOL geometry - same sacred sequence as before ------------------
   // Center circle
   carvedCircle(C, C, R, Math.round(r), Math.round(g), Math.round(b), 0.55);
 
-  // First ring — 6 petals
+  // First ring - 6 petals
   for(let i=0;i<6;i++){
     const a=i*Math.PI/3;
     carvedCircle(
@@ -1526,7 +1525,7 @@ function drawFOL(t){
     );
   }
 
-  // Second ring — outer petals (phi-shifted color)
+  // Second ring - outer petals (phi-shifted color)
   for(let i=0;i<6;i++){
     const a=i*Math.PI/3;
     carvedCircle(
@@ -1542,7 +1541,7 @@ function drawFOL(t){
     );
   }
 
-  // Outer containing circle — the boundary ring
+  // Outer containing circle - the boundary ring
   folCtx.beginPath();
   folCtx.arc(C,C,R*2.7,0,Math.PI*2);
   folCtx.strokeStyle=`rgba(0,0,0,0.45)`;
@@ -1556,10 +1555,10 @@ function drawFOL(t){
 }
 
 
-// Table area fill light — makes table surface visible
+// Table area fill light - makes table surface visible
 const tableLight=new THREE.PointLight(0xfff4e8,3.8,16);
 tableLight.position.set(0,2.8,0); scene.add(tableLight);
-// ─── SOURCE GLOBE — center hover ─────────────────────────────────────────────
+// --- SOURCE GLOBE - center hover ---------------------------------------------
 const srcCWCanvas=mkCanvas(512,512); const srcCCWCanvas=mkCanvas(512,512);
 const srcCWCtx=srcCWCanvas.getContext('2d'); const srcCCWCtx=srcCCWCanvas.getContext('2d');
 paintRing(srcCWCtx,512,512,'rgba(255,195,120,0.95)');
@@ -1570,7 +1569,7 @@ const sourceGlobe=makeGlobe(4.8,srcTexCW,srcTexCCW);
 sourceGlobe.position.set(0,3.6,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,1.6,28); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 
-// ─── FAMILY SEATS ─────────────────────────────────────────────────────────────
+// --- FAMILY SEATS -------------------------------------------------------------
 const MEMBERS=[
   {name:'Marz',    role:'Founder',         color:null,      isMarz:true, online:true, angle:270},
   {name:'Yahriel', role:'CEO',             color:'orig',    isMarz:false,online:true, angle:30},
@@ -1590,7 +1589,7 @@ MEMBERS.forEach((m,i)=>{
   grp.position.set(sx,TABLE_Y,sz);
   grp.rotation.y=rad+Math.PI;
   grp.userData={member:m, ph:i*0.72};
-  // ── BURNT OAK PILLAR SEAT — matches table set ────────────────────────────────
+  // -- BURNT OAK PILLAR SEAT - matches table set --------------------------------
   const BURNT_OAK = new THREE.MeshStandardMaterial({
     color:0x1A0800, roughness:0.72, metalness:0.05   // burnt/charred oak
   });
@@ -1598,17 +1597,17 @@ MEMBERS.forEach((m,i)=>{
     color:0x2C1005, roughness:0.65, metalness:0.06   // mid-grain
   });
   const RGOLD = new THREE.MeshStandardMaterial({
-    color:0xC89278, roughness:0.08, metalness:0.96   // rose-gold — exact table match
+    color:0xC89278, roughness:0.08, metalness:0.96   // rose-gold -- exact table match
   });
 
-  // ── MAIN PILLAR BODY — single turned column, tapered ─────────────────────
+  // -- MAIN PILLAR BODY - single turned column, tapered ---------------------
   const pillarMain = new THREE.Mesh(
     new THREE.CylinderGeometry(0.18, 0.22, 1.10, 64),
     BURNT_OAK.clone()
   );
   pillarMain.position.set(0, 0.15, 0); pillarMain.castShadow=true; grp.add(pillarMain);
 
-  // ── TURNED RING DETAILS — spaced along pillar shaft ──────────────────────
+  // -- TURNED RING DETAILS - spaced along pillar shaft ----------------------
   [-0.25, 0.05, 0.30, 0.52].forEach(ry=>{
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.215, 0.022, 12, 40),
@@ -1618,7 +1617,7 @@ MEMBERS.forEach((m,i)=>{
     ring.position.set(0, 0.15 + ry, 0); grp.add(ring);
   });
 
-  // ── GOLD TRIM BANDS — top, middle, bottom ────────────────────────────────
+  // -- GOLD TRIM BANDS - top, middle, bottom --------------------------------
   [0.68, 0.15, -0.38].forEach(gy=>{
     const band = new THREE.Mesh(
       new THREE.TorusGeometry(0.205, 0.014, 10, 40),
@@ -1628,7 +1627,7 @@ MEMBERS.forEach((m,i)=>{
     band.position.set(0, 0.15 + gy, 0); grp.add(band);
   });
 
-  // ── CAPITAL (top cap) — wide flat disc, gold trim ─────────────────────────
+  // -- CAPITAL (top cap) - wide flat disc, gold trim -------------------------
   const capital = new THREE.Mesh(
     new THREE.CylinderGeometry(0.28, 0.20, 0.06, 64),
     BURNT_OAK.clone()
@@ -1642,7 +1641,7 @@ MEMBERS.forEach((m,i)=>{
   capitalRim.rotation.x = Math.PI/2;
   capitalRim.position.set(0, 0.762, 0); grp.add(capitalRim);
 
-  // ── BASE (plinth) — wide footing, gold trim ───────────────────────────────
+  // -- BASE (plinth) - wide footing, gold trim -------------------------------
   const base = new THREE.Mesh(
     new THREE.CylinderGeometry(0.26, 0.28, 0.07, 64),
     BURNT_OAK.clone()
@@ -1656,7 +1655,7 @@ MEMBERS.forEach((m,i)=>{
   baseRim.rotation.x = Math.PI/2;
   baseRim.position.set(0, -0.362, 0); grp.add(baseRim);
 
-  // Bottom foot plate — flat disc on floor
+  // Bottom foot plate - flat disc on floor
   const footPlate = new THREE.Mesh(
     new THREE.CylinderGeometry(0.30, 0.30, 0.025, 32),
     BURNT_MID.clone()
@@ -1713,7 +1712,7 @@ MEMBERS.forEach((m,i)=>{
   scene.add(grp); seats.push(grp);
 });
 
-// ─── CAMERA CONTROL ──────────────────────────────────────────────────────────
+// --- CAMERA CONTROL ----------------------------------------------------------
 const mouse=new THREE.Vector2();
 let isDrag=false, px0=0, py0=0, rotY=0, rotX=-0.22, zoom=13;
 canvas.addEventListener('mousedown',e=>{isDrag=false;px0=e.clientX;py0=e.clientY;});
@@ -1735,11 +1734,11 @@ canvas.addEventListener('click',e=>{
   if(!hits.length)return;
   const m=hits[0].object.userData.member;
   const el=document.getElementById('info');
-  el.textContent=m.isMarz?'👑 Marz — Head of the Table':`>> ${m.name} | ${m.role}`;
+  el.textContent=m.isMarz?'\u1F451 Marz -- Head of the Table':`>> ${m.name} | ${m.role}`;
   el.style.opacity='1'; setTimeout(()=>el.style.opacity='0',3000);
 });
 
-// ─── ANIMATE LOOP ─────────────────────────────────────────────────────────────
+// --- ANIMATE LOOP -------------------------------------------------------------
 const clock=new THREE.Clock();
 let lastColorUpdate=-1;
 renderer.setAnimationLoop(()=>{
@@ -1752,7 +1751,7 @@ renderer.setAnimationLoop(()=>{
   camera.position.set(cx,cy,cz); camera.lookAt(0,1.5,0);
   drawFOL(t); drawKG(t);
   drawEdgeBand(t,0.016);
-  // color update — throttled to 20fps
+  // color update - throttled to 20fps
   if(t-lastColorUpdate>0.05){
     lastColorUpdate=t;
     const{r,g,b}=getColor(t); const d=1/PHI;
@@ -1789,7 +1788,7 @@ renderer.setAnimationLoop(()=>{
   const tip=document.getElementById('tooltip');
   if(hits.length){
     const m=hits[0].object.userData.member;
-    tip.textContent=m.isMarz?'👑 Marz — Head of the Table':`Click to engage | ${m.name} | ${m.role}`;
+    tip.textContent=m.isMarz?'\u1F451 Marz -- Head of the Table':`Click to engage | ${m.name} | ${m.role}`;
     tip.style.opacity='1'; canvas.style.cursor='pointer';
   } else {
     tip.style.opacity='0'; canvas.style.cursor='grab';

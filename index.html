@@ -30,6 +30,7 @@ import * as THREE from 'three';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 // ─── φ / SACRED ───────────────────────────────────────────────────────────────
 const PHI = 1.6180339887498948482;
@@ -75,7 +76,7 @@ function paintRing(ctx,w,h,css){
 // ─── GLOBE BUILDER ────────────────────────────────────────────────────────────
 function makeGlobe(scale, cwTex, ccwTex){
   const group = new THREE.Group();
-  const N=80, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
+  const N=128, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
   const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*1.02, 2*Math.sin(0.4)*1.02);
   for(let i=0;i<N;i++){
     const y=1-(i/(N-1))*2, r2=Math.sqrt(Math.max(0,1-y*y)), theta=PHI_SQ*i;
@@ -109,27 +110,34 @@ function animGlobe(group, t){
 
 // ─── SCENE SETUP ──────────────────────────────────────────────────────────────
 const canvas=document.getElementById('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance',logarithmicDepthBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,3));
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.VSMShadowMap;
 renderer.physicallyCorrectLights = true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.55;
+renderer.toneMappingExposure=1.72;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
+
+// ── High-quality environment lighting for metallic surfaces ──────────────────
+const pmrem = new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+const envScene = new THREE.RoomEnvironment(0.7);
+scene.environment = pmrem.fromScene(envScene).texture;
+scene.environment.colorSpace = THREE.SRGBColorSpace;
+pmrem.dispose();
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x040202);
-scene.fog=new THREE.FogExp2(0x040202,0.016);
+scene.fog=new THREE.FogExp2(0x040202,0.012);
 
-const camera=new THREE.PerspectiveCamera(52,1,0.1,150);
+const camera=new THREE.PerspectiveCamera(48,1,0.05,200);
 camera.position.set(0,4.5,13);
 
 // Post-processing
 const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),1.4,0.55,0.08));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),1.15,0.42,0.04));
 
 function onResize(){
   const W=window.innerWidth,H=window.innerHeight;
@@ -144,7 +152,7 @@ function rgMat(ei=0.5){return new THREE.MeshStandardMaterial({color:RG.main,roug
 function darkMat(col=0x0a0505){return new THREE.MeshStandardMaterial({color:col,roughness:0.82,metalness:0.15});}
 
 // Wall texture — black panels with rose-gold dado
-function makeWallTex(W=2048,H=1024,pcols=5,prows=2){
+function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
   return mkTex(W,H,(ctx)=>{
     // Deep black lacquer base
     const baseG=ctx.createLinearGradient(0,0,W,H);
@@ -197,7 +205,7 @@ function makeWallTex(W=2048,H=1024,pcols=5,prows=2){
   });
 }
 function makeFloorTex(){
-  return mkTex(2048,2048,(ctx,W,H)=>{
+  return mkTex(4096,4096,(ctx,W,H)=>{
     // ── Base: deep space near-black with warm copper undertone ────────────
     const base = ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,W*0.78);
     base.addColorStop(0,   '#1a0d0a');
@@ -346,7 +354,7 @@ function makeFloorTex(){
 }
 
 function makeCeilTex(){
-  return mkTex(2048,2048,(ctx,W,H)=>{
+  return mkTex(4096,4096,(ctx,W,H)=>{
     ctx.fillStyle='#040202'; ctx.fillRect(0,0,W,H);
     // 4x4 coffered panels
     const cols=4,rows=4,cw=W/cols,ch=H/rows,cmg=cw*0.07;
@@ -1476,7 +1484,7 @@ function drawFOL(t){
 
 
 // Table area fill light — makes table surface visible
-const tableLight=new THREE.PointLight(0xfff0e0,2.5,12);
+const tableLight=new THREE.PointLight(0xfff4e8,3.8,16);
 tableLight.position.set(0,2.8,0); scene.add(tableLight);
 // ─── SOURCE GLOBE — center hover ─────────────────────────────────────────────
 const srcCWCanvas=mkCanvas(512,512); const srcCCWCanvas=mkCanvas(512,512);
@@ -1485,9 +1493,9 @@ paintRing(srcCWCtx,512,512,'rgba(255,195,120,0.95)');
 paintRing(srcCCWCtx,512,512,'rgba(210,160,100,0.82)');
 const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
-const sourceGlobe=makeGlobe(4.4,srcTexCW,srcTexCCW);
+const sourceGlobe=makeGlobe(4.8,srcTexCW,srcTexCCW);
 sourceGlobe.position.set(0,3.6,0); scene.add(sourceGlobe);
-const srcLight=new THREE.PointLight(0xffeebb,1.1,22); srcLight.position.set(0,3.6,0); scene.add(srcLight);
+const srcLight=new THREE.PointLight(0xffeedd,1.6,28); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 
 // ─── FAMILY SEATS ─────────────────────────────────────────────────────────────
 const MEMBERS=[
@@ -1522,7 +1530,7 @@ MEMBERS.forEach((m,i)=>{
 
   // ── MAIN PILLAR BODY — single turned column, tapered ─────────────────────
   const pillarMain = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.22, 1.10, 32),
+    new THREE.CylinderGeometry(0.18, 0.22, 1.10, 64),
     BURNT_OAK.clone()
   );
   pillarMain.position.set(0, 0.15, 0); pillarMain.castShadow=true; grp.add(pillarMain);
@@ -1549,7 +1557,7 @@ MEMBERS.forEach((m,i)=>{
 
   // ── CAPITAL (top cap) — wide flat disc, gold trim ─────────────────────────
   const capital = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.28, 0.20, 0.06, 32),
+    new THREE.CylinderGeometry(0.28, 0.20, 0.06, 64),
     BURNT_OAK.clone()
   );
   capital.position.set(0, 0.73, 0); grp.add(capital);
@@ -1563,7 +1571,7 @@ MEMBERS.forEach((m,i)=>{
 
   // ── BASE (plinth) — wide footing, gold trim ───────────────────────────────
   const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.26, 0.28, 0.07, 32),
+    new THREE.CylinderGeometry(0.26, 0.28, 0.07, 64),
     BURNT_OAK.clone()
   );
   base.position.set(0, -0.395, 0); grp.add(base);
@@ -1654,7 +1662,7 @@ canvas.addEventListener('click',e=>{
   if(!hits.length)return;
   const m=hits[0].object.userData.member;
   const el=document.getElementById('info');
-  el.textContent=m.isMarz?'👑 Marz — Head of the Table':`↗ ${m.name} · ${m.role}`;
+  el.textContent=m.isMarz?'👑 Marz — Head of the Table':`>> ${m.name} | ${m.role}`;
   el.style.opacity='1'; setTimeout(()=>el.style.opacity='0',3000);
 });
 
@@ -1708,7 +1716,7 @@ renderer.setAnimationLoop(()=>{
   const tip=document.getElementById('tooltip');
   if(hits.length){
     const m=hits[0].object.userData.member;
-    tip.textContent=m.isMarz?'👑 Marz — Head of the Table':`Click to engage · ${m.name} · ${m.role}`;
+    tip.textContent=m.isMarz?'👑 Marz — Head of the Table':`Click to engage | ${m.name} | ${m.role}`;
     tip.style.opacity='1'; canvas.style.cursor='pointer';
   } else {
     tip.style.opacity='0'; canvas.style.cursor='grab';

@@ -1734,7 +1734,7 @@ canvas.addEventListener('click',e=>{
   if(!hits.length)return;
   const m=hits[0].object.userData.member;
   const el=document.getElementById('info');
-  el.textContent=m.isMarz?'\u1F451 Marz -- Head of the Table':`>> ${m.name} | ${m.role}`;
+  el.textContent=m.isMarz?'\u{1F451} Marz -- Head of the Table':`>> ${m.name} | ${m.role}`;
   el.style.opacity='1'; setTimeout(()=>el.style.opacity='0',3000);
 });
 
@@ -1788,7 +1788,7 @@ renderer.setAnimationLoop(()=>{
   const tip=document.getElementById('tooltip');
   if(hits.length){
     const m=hits[0].object.userData.member;
-    tip.textContent=m.isMarz?'\u1F451 Marz -- Head of the Table':`Click to engage | ${m.name} | ${m.role}`;
+    tip.textContent=m.isMarz?'\u{1F451} Marz -- Head of the Table':`Click to engage | ${m.name} | ${m.role}`;
     tip.style.opacity='1'; canvas.style.cursor='pointer';
   } else {
     tip.style.opacity='0'; canvas.style.cursor='grab';

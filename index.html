@@ -497,7 +497,7 @@ function makeLogoTex(){
     ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
 
     // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
-    const iconX=cx-1280, iconY=H*0.50, iconR=260;
+    const iconX=cx-1580, iconY=H*0.50, iconR=240;
     ctx.shadowBlur=0;
 
     // 3D depth rings - layered shadow for emboss feel
@@ -623,7 +623,7 @@ function makeLogoTex(){
     // -- TRUESITE text - full premium metallic render --------------------------
     const FONT_SIZE = 360;
     ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
-    const tx=cx-1150, ty=H*0.60;
+    const tx=cx-920, ty=H*0.60;
 
     // 3D extrusion - 18 layers
     for(let i=18;i>0;i--){
@@ -670,7 +670,7 @@ function makeLogoTex(){
     // -- TECHNOLOGIES subtext -------------------------------------------------
     const SUB_SIZE=148;
     ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
-    const subx=cx-1070, suby=ty+160;
+    const subx=cx-900, suby=ty+160;
 
     // Extrusion
     for(let i=7;i>0;i--){

@@ -483,193 +483,266 @@ const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY
 
 // ─── LOGO — BACK WALL ONLY ────────────────────────────────────────────────────
 function makeLogoTex(){
-  return mkTex(2400,800,(ctx,W,H)=>{
+  return mkTex(4800,1600,(ctx,W,H)=>{
     ctx.clearRect(0,0,W,H);
     const cx=W/2;
 
-    // ── Crosshair icon — metallic rose gold/copper, NO bloom on icon itself ──
-    const iconX=cx-560, iconY=340, iconR=155;
+    // ── Background — deep noir with subtle warm vignette ──────────────────────
+    const bgG=ctx.createRadialGradient(cx,H*0.55,0,cx,H*0.55,W*0.62);
+    bgG.addColorStop(0,'rgba(18,6,8,0.0)');
+    bgG.addColorStop(0.45,'rgba(12,4,6,0.0)');
+    bgG.addColorStop(1,'rgba(4,1,2,0.0)');
+    ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
+
+    // ── Crosshair icon — premium metallic, NO shadowBlur ─────────────────────
+    const iconX=cx-1090, iconY=H*0.50, iconR=280;
     ctx.shadowBlur=0;
 
-    // 3D metal circle — layered depth strokes
-    for(let i=14;i>0;i--){
-      ctx.strokeStyle=`rgba(60,20,25,${i/14*0.20})`; ctx.lineWidth=i*3;
+    // 3D depth rings — layered shadow for emboss feel
+    for(let i=22;i>0;i--){
+      ctx.strokeStyle=`rgba(40,10,14,${i/22*0.18})`; ctx.lineWidth=i*4.5;
       ctx.beginPath(); ctx.arc(iconX,iconY,iconR,0,Math.PI*2); ctx.stroke();
     }
-    // Metallic gradient stroke — copper to rose gold
+
+    // Primary metallic ring — copper-to-rose-gold swept gradient
     const circG=ctx.createLinearGradient(iconX-iconR,iconY-iconR,iconX+iconR,iconY+iconR);
-    circG.addColorStop(0,'#6b2e38');   // deep copper shadow
-    circG.addColorStop(0.2,'#b87040'); // warm copper highlight
-    circG.addColorStop(0.4,'#d4919e'); // rose gold
-    circG.addColorStop(0.55,'#c8803a');// copper peak
-    circG.addColorStop(0.75,'#e8b090');// light bronze
-    circG.addColorStop(1,'#7a3840');   // shadow edge
-    ctx.strokeStyle=circG; ctx.lineWidth=20; ctx.shadowBlur=0;
+    circG.addColorStop(0,   '#4a1e26'); // deep shadow edge
+    circG.addColorStop(0.08,'#7a3828'); // dark copper
+    circG.addColorStop(0.20,'#c07840'); // warm copper
+    circG.addColorStop(0.35,'#e8a870'); // bright bronze
+    circG.addColorStop(0.48,'#d4919e'); // rose gold peak
+    circG.addColorStop(0.60,'#eabf88'); // light copper
+    circG.addColorStop(0.75,'#c07038'); // mid copper
+    circG.addColorStop(0.88,'#8a4830'); // deep copper
+    circG.addColorStop(1,   '#5a2828'); // shadow base
+    ctx.strokeStyle=circG; ctx.lineWidth=36; ctx.shadowBlur=0;
     ctx.beginPath(); ctx.arc(iconX,iconY,iconR,0,Math.PI*2); ctx.stroke();
 
-    // Inner circle — subtle copper
-    ctx.strokeStyle='rgba(180,110,55,0.55)'; ctx.lineWidth=8; ctx.shadowBlur=0;
+    // Specular highlight arc — top-left catch
+    const specArc=ctx.createLinearGradient(iconX-iconR,iconY-iconR,iconX,iconY);
+    specArc.addColorStop(0,'rgba(255,235,200,0.0)');
+    specArc.addColorStop(0.3,'rgba(255,240,210,0.65)');
+    specArc.addColorStop(0.55,'rgba(255,245,220,0.80)');
+    specArc.addColorStop(1,'rgba(255,235,200,0.0)');
+    ctx.strokeStyle=specArc; ctx.lineWidth=6; ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(iconX,iconY,iconR,-Math.PI*0.9,-Math.PI*0.05); ctx.stroke();
+
+    // Inner concentric ring
+    ctx.strokeStyle='rgba(185,118,58,0.50)'; ctx.lineWidth=14; ctx.shadowBlur=0;
     ctx.beginPath(); ctx.arc(iconX,iconY,iconR*0.62,0,Math.PI*2); ctx.stroke();
 
-    // Crosshair lines — brushed copper
-    const crossG=ctx.createLinearGradient(iconX-iconR,iconY,iconX+iconR,iconY);
-    crossG.addColorStop(0,'rgba(180,100,40,0)');
-    crossG.addColorStop(0.2,'#c87840');
-    crossG.addColorStop(0.5,'#e8b490');
-    crossG.addColorStop(0.8,'#c87840');
-    crossG.addColorStop(1,'rgba(180,100,40,0)');
-    ctx.strokeStyle=crossG; ctx.lineWidth=8; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.moveTo(iconX-iconR*1.05,iconY); ctx.lineTo(iconX+iconR*1.05,iconY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(iconX,iconY-iconR*1.05); ctx.lineTo(iconX,iconY+iconR*1.05); ctx.stroke();
+    // Crosshair lines — tapered copper
+    [[1,0],[0,1]].forEach(([dx,dy])=>{
+      const cg=ctx.createLinearGradient(
+        iconX-iconR*dx,iconY-iconR*dy,
+        iconX+iconR*dx,iconY+iconR*dy
+      );
+      cg.addColorStop(0,'rgba(180,100,40,0)');
+      cg.addColorStop(0.18,'#c87840');
+      cg.addColorStop(0.5,'#ecba94');
+      cg.addColorStop(0.82,'#c87840');
+      cg.addColorStop(1,'rgba(180,100,40,0)');
+      ctx.strokeStyle=cg; ctx.lineWidth=13; ctx.shadowBlur=0;
+      ctx.beginPath();
+      ctx.moveTo(iconX-iconR*1.06*dx, iconY-iconR*1.06*dy);
+      ctx.lineTo(iconX+iconR*1.06*dx, iconY+iconR*1.06*dy);
+      ctx.stroke();
+    });
 
-    // Tick marks
-    ctx.strokeStyle='rgba(200,135,65,0.75)'; ctx.lineWidth=5; ctx.shadowBlur=0;
+    // Tick marks — precision instrument feel
+    ctx.strokeStyle='rgba(210,148,72,0.80)'; ctx.lineWidth=9; ctx.shadowBlur=0;
     [-1,1].forEach(dir=>{
-      [0.78,0.88].forEach(d=>{
-        ctx.beginPath(); ctx.moveTo(iconX+iconR*d*dir,iconY-9); ctx.lineTo(iconX+iconR*d*dir,iconY+9); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(iconX-9,iconY+iconR*d*dir); ctx.lineTo(iconX+9,iconY+iconR*d*dir); ctx.stroke();
+      [0.76,0.87,0.96].forEach(d=>{
+        ctx.beginPath(); ctx.moveTo(iconX+iconR*d*dir,-16+iconY); ctx.lineTo(iconX+iconR*d*dir,16+iconY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(iconX-16,iconY+iconR*d*dir); ctx.lineTo(iconX+16,iconY+iconR*d*dir); ctx.stroke();
       });
     });
 
-    // House silhouette — brushed copper/rose gold metal
-    const hx=iconX, hy=iconY+18;
-    // Shadow depth
-    ctx.fillStyle='rgba(30,8,10,0.7)'; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.moveTo(hx-70,hy-40); ctx.lineTo(hx,hy-118); ctx.lineTo(hx+70,hy-40); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.rect(hx-52,hy-40,104,92); ctx.fill();
-    // Roof — copper metallic
-    const roofG=ctx.createLinearGradient(hx-65,hy-115,hx+65,hy-38);
-    roofG.addColorStop(0,'#6b2e38'); roofG.addColorStop(0.3,'#c87840'); roofG.addColorStop(0.6,'#e8b490'); roofG.addColorStop(1,'#8a4830');
+    // House silhouette — layered metallic build
+    const hx=iconX, hy=iconY+32;
+    const hScale=1.85;
+
+    // Shadow depth base
+    ctx.fillStyle='rgba(20,4,6,0.75)'; ctx.shadowBlur=0;
+    ctx.beginPath();
+    ctx.moveTo(hx-70*hScale,hy-40*hScale);
+    ctx.lineTo(hx,hy-120*hScale);
+    ctx.lineTo(hx+70*hScale,hy-40*hScale);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.rect(hx-52*hScale,hy-40*hScale,104*hScale,92*hScale); ctx.fill();
+
+    // Roof — swept copper gradient
+    const roofG=ctx.createLinearGradient(hx-65*hScale,hy-115*hScale,hx+65*hScale,hy-36*hScale);
+    roofG.addColorStop(0,'#5a2028'); roofG.addColorStop(0.25,'#c07840');
+    roofG.addColorStop(0.55,'#ecb488'); roofG.addColorStop(1,'#883828');
     ctx.fillStyle=roofG;
-    ctx.beginPath(); ctx.moveTo(hx-68,hy-38); ctx.lineTo(hx,hy-115); ctx.lineTo(hx+68,hy-38); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(hx-68*hScale,hy-37*hScale);
+    ctx.lineTo(hx,hy-118*hScale);
+    ctx.lineTo(hx+68*hScale,hy-37*hScale);
+    ctx.closePath(); ctx.fill();
+
+    // Specular hit on roof peak
+    ctx.fillStyle='rgba(255,230,185,0.22)';
+    ctx.beginPath();
+    ctx.moveTo(hx-10,hy-118*hScale);
+    ctx.lineTo(hx+10,hy-118*hScale);
+    ctx.lineTo(hx+32*hScale,hy-60*hScale);
+    ctx.lineTo(hx-32*hScale,hy-60*hScale);
+    ctx.closePath(); ctx.fill();
+
     // Body — rose gold to copper
-    const bodyG=ctx.createLinearGradient(hx-50,hy-38,hx+50,hy+50);
-    bodyG.addColorStop(0,'#c87888'); bodyG.addColorStop(0.5,'#a05848'); bodyG.addColorStop(1,'#6a3030');
+    const bodyG=ctx.createLinearGradient(hx-50*hScale,hy-38*hScale,hx+50*hScale,hy+52*hScale);
+    bodyG.addColorStop(0,'#cc7e8c'); bodyG.addColorStop(0.45,'#a85848'); bodyG.addColorStop(1,'#682828');
     ctx.fillStyle=bodyG;
-    ctx.beginPath(); ctx.rect(hx-50,hy-38,100,90); ctx.fill();
+    ctx.beginPath(); ctx.rect(hx-50*hScale,hy-38*hScale,100*hScale,92*hScale); ctx.fill();
+
     // Chimney
-    const chimG=ctx.createLinearGradient(hx+18,hy-125,hx+40,hy-73);
-    chimG.addColorStop(0,'#b87040'); chimG.addColorStop(1,'#7a3828');
-    ctx.fillStyle=chimG; ctx.beginPath(); ctx.rect(hx+18,hy-125,22,52); ctx.fill();
-    // Door
-    ctx.fillStyle='rgba(5,2,2,0.92)';
-    ctx.beginPath(); ctx.rect(hx-16,hy+18,32,34); ctx.fill();
-    ctx.shadowBlur=0;
+    const chimG=ctx.createLinearGradient(hx+18*hScale,hy-128*hScale,hx+40*hScale,hy-70*hScale);
+    chimG.addColorStop(0,'#c07840'); chimG.addColorStop(1,'#7a3828');
+    ctx.fillStyle=chimG;
+    ctx.beginPath(); ctx.rect(hx+16*hScale,hy-128*hScale,22*hScale,56*hScale); ctx.fill();
 
-    // ── TRUESITE text — brushed metallic copper + rose gold, NO self-glow ───
-    ctx.font='bold 185px Arial Black,Arial'; ctx.textBaseline='alphabetic';
-    const tx=cx-100, ty=420;
+    // Door — arched top
+    ctx.fillStyle='rgba(4,1,2,0.94)';
+    ctx.beginPath();
+    ctx.arc(hx,hy+20*hScale,16*hScale,Math.PI,0);
+    ctx.rect(hx-16*hScale,hy+20*hScale,32*hScale,34*hScale);
+    ctx.fill();
 
-    // 3D depth shadow layers — dark, pushed back
-    for(let i=10;i>0;i--){
-      ctx.fillStyle=`rgba(20,5,8,${0.32-i*0.025})`;
-      ctx.fillText('TRUESITE',tx+i*2,ty+i*1.8);
+    // Window — left
+    ctx.fillStyle='rgba(255,210,140,0.18)';
+    ctx.strokeStyle='rgba(200,135,65,0.70)'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.rect(hx-42*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
+
+    // Window — right
+    ctx.beginPath(); ctx.rect(hx+20*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
+
+    // ── TRUESITE text — full premium metallic render ──────────────────────────
+    const FONT_SIZE = 360;
+    ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
+    const tx=cx-186, ty=H*0.60;
+
+    // 3D extrusion — 18 layers
+    for(let i=18;i>0;i--){
+      ctx.fillStyle=`rgba(16,4,6,${0.34-i*0.016})`;
+      ctx.shadowBlur=0;
+      ctx.fillText('TRUESITE',tx+i*2.8,ty+i*2.2);
     }
 
-    // Metallic brushed copper/rose gold fill — NO shadowBlur
-    const tg=ctx.createLinearGradient(tx,ty-250,tx,ty+10);
-    tg.addColorStop(0,   '#4a1a20'); // deep shadow top edge
-    tg.addColorStop(0.08,'#8a4035'); // dark copper
-    tg.addColorStop(0.18,'#c87840'); // warm copper highlight
-    tg.addColorStop(0.30,'#e8a870'); // bright copper/bronze
-    tg.addColorStop(0.42,'#d4919e'); // rose gold centre streak
-    tg.addColorStop(0.52,'#e8b090'); // light copper
-    tg.addColorStop(0.65,'#c06838'); // mid copper
-    tg.addColorStop(0.80,'#a05040'); // deeper copper
-    tg.addColorStop(1,   '#5a2828'); // shadow base
-    ctx.shadowBlur=0; ctx.fillStyle=tg;
+    // Main metallic fill gradient — vertical sweep
+    const tg=ctx.createLinearGradient(tx,ty-FONT_SIZE*1.05,tx,ty+FONT_SIZE*0.12);
+    tg.addColorStop(0,   '#3a1218'); // shadow crown
+    tg.addColorStop(0.06,'#7a3828'); // deep copper
+    tg.addColorStop(0.16,'#c27840'); // warm copper
+    tg.addColorStop(0.28,'#eaaa70'); // bright bronze
+    tg.addColorStop(0.40,'#d4919e'); // rose gold streak
+    tg.addColorStop(0.50,'#ecb888'); // light bronze peak
+    tg.addColorStop(0.62,'#c06838'); // mid copper descent
+    tg.addColorStop(0.78,'#9a4a38'); // deeper copper
+    tg.addColorStop(1,   '#4a2020'); // shadow base
+    ctx.fillStyle=tg; ctx.shadowBlur=0;
     ctx.fillText('TRUESITE',tx,ty);
 
-    // Thin specular highlight stroke across top of letters
-    const hiG=ctx.createLinearGradient(tx,ty-240,tx+1400,ty-240);
-    hiG.addColorStop(0,'rgba(240,200,160,0)');
-    hiG.addColorStop(0.15,'rgba(255,225,190,0.55)');
-    hiG.addColorStop(0.5,'rgba(255,240,210,0.70)');
-    hiG.addColorStop(0.85,'rgba(255,225,190,0.55)');
-    hiG.addColorStop(1,'rgba(240,200,160,0)');
-    ctx.strokeStyle=hiG; ctx.lineWidth=1.2; ctx.shadowBlur=0;
+    // Specular highlight stroke — top edge light catch
+    const hiG=ctx.createLinearGradient(tx,ty-FONT_SIZE,tx+2800,ty-FONT_SIZE);
+    hiG.addColorStop(0,  'rgba(245,210,165,0)');
+    hiG.addColorStop(0.1,'rgba(255,232,195,0.45)');
+    hiG.addColorStop(0.5,'rgba(255,248,218,0.72)');
+    hiG.addColorStop(0.9,'rgba(255,232,195,0.45)');
+    hiG.addColorStop(1,  'rgba(245,210,165,0)');
+    ctx.strokeStyle=hiG; ctx.lineWidth=2.0; ctx.shadowBlur=0;
     ctx.strokeText('TRUESITE',tx,ty);
 
-    // ── TECHNOLOGIES subtext — brushed metal, NO self-glow ──────────────
-    ctx.font='700 74px Arial'; ctx.textBaseline='alphabetic';
-    const subx=cx-98, suby=ty+80;
+    // Second pass specular — mid-body sheen band
+    ctx.save();
+    ctx.globalAlpha=0.22;
+    const midG=ctx.createLinearGradient(tx,ty-FONT_SIZE*0.55,tx,ty-FONT_SIZE*0.35);
+    midG.addColorStop(0,'rgba(255,235,195,0)');
+    midG.addColorStop(0.5,'rgba(255,245,215,1)');
+    midG.addColorStop(1,'rgba(255,235,195,0)');
+    ctx.fillStyle=midG;
+    ctx.fillText('TRUESITE',tx,ty);
+    ctx.restore();
 
-    // Depth layers
-    for(let i=5;i>0;i--){
-      ctx.fillStyle=`rgba(20,5,8,${0.25-i*0.03})`;
+    // ── TECHNOLOGIES subtext ─────────────────────────────────────────────────
+    const SUB_SIZE=148;
+    ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
+    const subx=cx-188, suby=ty+160;
+
+    // Extrusion
+    for(let i=7;i>0;i--){
+      ctx.fillStyle=`rgba(16,4,6,${0.26-i*0.025})`; ctx.shadowBlur=0;
       ctx.fillText('TECHNOLOGIES',subx+i,suby+i);
     }
-    const sg=ctx.createLinearGradient(subx,suby-90,subx,suby+8);
-    sg.addColorStop(0,   '#6a3030');
-    sg.addColorStop(0.2, '#b87040'); // copper
-    sg.addColorStop(0.45,'#d4919e'); // rose gold
-    sg.addColorStop(0.7, '#c06838'); // copper
-    sg.addColorStop(1,   '#7a3828');
-    ctx.shadowBlur=0; ctx.fillStyle=sg;
+    const sg=ctx.createLinearGradient(subx,suby-SUB_SIZE*1.0,subx,suby+SUB_SIZE*0.12);
+    sg.addColorStop(0,  '#5a2828');
+    sg.addColorStop(0.18,'#b87040');
+    sg.addColorStop(0.42,'#d4919e');
+    sg.addColorStop(0.68,'#c07038');
+    sg.addColorStop(1,  '#782828');
+    ctx.fillStyle=sg; ctx.shadowBlur=0;
     ctx.fillText('TECHNOLOGIES',subx,suby);
 
-    // Specular highlight on subtext
-    ctx.strokeStyle='rgba(240,195,150,0.30)'; ctx.lineWidth=0.8; ctx.shadowBlur=0;
+    // Subtext specular
+    ctx.strokeStyle='rgba(245,200,155,0.28)'; ctx.lineWidth=1.4; ctx.shadowBlur=0;
     ctx.strokeText('TECHNOLOGIES',subx,suby);
 
-    // ── UNDERGLOW — soft rose gold/copper light FROM BEHIND, below logo ──
-    // Wide soft halo behind the whole logo area
-    const ugHalo=ctx.createRadialGradient(cx,H*0.75,0,cx,H*0.75,680);
-    ugHalo.addColorStop(0,'rgba(200,120,80,0.28)');   // copper core
-    ugHalo.addColorStop(0.3,'rgba(212,145,100,0.18)');// warm gold
-    ugHalo.addColorStop(0.6,'rgba(190,105,120,0.10)');// rose hint
+    // ── UNDERGLOW — multi-layer premium backlight ─────────────────────────────
+    // Deep radial halo
+    const ugHalo=ctx.createRadialGradient(cx,H*0.72,0,cx,H*0.72,W*0.55);
+    ugHalo.addColorStop(0,'rgba(210,130,85,0.32)');
+    ugHalo.addColorStop(0.28,'rgba(218,150,105,0.20)');
+    ugHalo.addColorStop(0.55,'rgba(195,112,128,0.11)');
     ugHalo.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=ugHalo; ctx.fillRect(0,0,W,H);
 
-    // Horizontal bar glow behind text (simulate backlight strip)
-    const ugBar=ctx.createLinearGradient(cx-800,0,cx+800,0);
-    ugBar.addColorStop(0,  'rgba(180,95,60,0)');
-    ugBar.addColorStop(0.15,'rgba(200,120,70,0.30)');
-    ugBar.addColorStop(0.5, 'rgba(220,145,90,0.45)');
-    ugBar.addColorStop(0.85,'rgba(200,120,70,0.30)');
-    ugBar.addColorStop(1,  'rgba(180,95,60,0)');
-    ctx.fillStyle=ugBar;
-    ctx.fillRect(cx-800, H*0.18, 1600, H*0.72);
+    // Wide warm bar behind text zone
+    const ugBar=ctx.createLinearGradient(cx-1600,0,cx+1600,0);
+    ugBar.addColorStop(0,   'rgba(180,95,60,0)');
+    ugBar.addColorStop(0.12,'rgba(205,122,72,0.28)');
+    ugBar.addColorStop(0.5, 'rgba(225,148,92,0.42)');
+    ugBar.addColorStop(0.88,'rgba(205,122,72,0.28)');
+    ugBar.addColorStop(1,   'rgba(180,95,60,0)');
+    ctx.fillStyle=ugBar; ctx.fillRect(cx-1600,H*0.14,3200,H*0.76);
 
-    // Bright underglow baseline strip — the "LED strip" behind the logo
-    const stripG=ctx.createLinearGradient(cx-700,0,cx+700,0);
-    stripG.addColorStop(0,  'rgba(212,145,100,0)');
-    stripG.addColorStop(0.2,'rgba(230,155,100,0.75)');
-    stripG.addColorStop(0.5,'rgba(245,185,120,0.95)');
-    stripG.addColorStop(0.8,'rgba(230,155,100,0.75)');
-    stripG.addColorStop(1,  'rgba(212,145,100,0)');
-    ctx.fillStyle=stripG;
-    ctx.fillRect(cx-700, H*0.82, 1400, 28);
+    // Warm amber underglow strip
+    const stripG=ctx.createLinearGradient(cx-1400,0,cx+1400,0);
+    stripG.addColorStop(0,  'rgba(220,152,100,0)');
+    stripG.addColorStop(0.18,'rgba(238,165,104,0.78)');
+    stripG.addColorStop(0.5, 'rgba(252,192,124,0.98)');
+    stripG.addColorStop(0.82,'rgba(238,165,104,0.78)');
+    stripG.addColorStop(1,  'rgba(220,152,100,0)');
+    ctx.fillStyle=stripG; ctx.fillRect(cx-1400,H*0.836,2800,42);
 
-    // Rose gold edge bloom strip above strip
-    const roseStrip=ctx.createLinearGradient(cx-650,0,cx+650,0);
-    roseStrip.addColorStop(0,  'rgba(212,145,158,0)');
-    roseStrip.addColorStop(0.25,'rgba(212,145,158,0.60)');
-    roseStrip.addColorStop(0.5, 'rgba(235,175,180,0.85)');
-    roseStrip.addColorStop(0.75,'rgba(212,145,158,0.60)');
-    roseStrip.addColorStop(1,  'rgba(212,145,158,0)');
-    ctx.fillStyle=roseStrip;
-    ctx.fillRect(cx-650, H*0.80, 1300, 14);
+    // Rose gold accent strip
+    const roseStrip=ctx.createLinearGradient(cx-1280,0,cx+1280,0);
+    roseStrip.addColorStop(0,   'rgba(215,148,162,0)');
+    roseStrip.addColorStop(0.22,'rgba(218,152,165,0.62)');
+    roseStrip.addColorStop(0.5, 'rgba(240,180,188,0.88)');
+    roseStrip.addColorStop(0.78,'rgba(218,152,165,0.62)');
+    roseStrip.addColorStop(1,   'rgba(215,148,162,0)');
+    ctx.fillStyle=roseStrip; ctx.fillRect(cx-1280,H*0.812,2560,22);
 
-    // Bright thin line — the LED strip itself
-    const ledLine=ctx.createLinearGradient(cx-580,0,cx+580,0);
-    ledLine.addColorStop(0,'rgba(255,230,200,0)');
-    ledLine.addColorStop(0.2,'rgba(255,220,180,0.95)');
-    ledLine.addColorStop(0.5,'rgba(255,245,225,1.0)');
-    ledLine.addColorStop(0.8,'rgba(255,220,180,0.95)');
-    ledLine.addColorStop(1,'rgba(255,230,200,0)');
-    ctx.strokeStyle=ledLine; ctx.lineWidth=3; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.moveTo(cx-580,H*0.85); ctx.lineTo(cx+580,H*0.85); ctx.stroke();
+    // LED strip — the hot white line itself
+    const ledLine=ctx.createLinearGradient(cx-1160,0,cx+1160,0);
+    ledLine.addColorStop(0,  'rgba(255,230,200,0)');
+    ledLine.addColorStop(0.18,'rgba(255,228,188,0.96)');
+    ledLine.addColorStop(0.5, 'rgba(255,250,230,1.0)');
+    ledLine.addColorStop(0.82,'rgba(255,228,188,0.96)');
+    ledLine.addColorStop(1,  'rgba(255,230,200,0)');
+    ctx.strokeStyle=ledLine; ctx.lineWidth=5; ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.moveTo(cx-1160,H*0.862); ctx.lineTo(cx+1160,H*0.862); ctx.stroke();
   });
 }
 
 
 const logoPlane=new THREE.Mesh(
-  new THREE.PlaneGeometry(RW*0.55,RH*0.42),
+  new THREE.PlaneGeometry(RW*0.62,RH*0.48),
   new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,depthWrite:false})
 );
 logoPlane.position.set(0,FY+RH*0.58,-RD/2+0.12); scene.add(logoPlane);
-const logoGlow=new THREE.PointLight(0xc87840,0.4,10); logoGlow.position.set(0,FY+RH*0.57,-RD/2+1.5); scene.add(logoGlow);
+const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.57,-RD/2+1.5); scene.add(logoGlow);
 
 // ── Front wall (opposite logo wall) — grant proposal video screen ─────────────
 const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/292ae2382_30011ed43_Rose_Gold_Logo_Animation_Generated.mp4');

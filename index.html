@@ -206,263 +206,129 @@ function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
 function makeFloorTex(){
   return mkTex(4096,4096,(ctx,W,H)=>{
 
-    // ══ LAYER 0: True deep-space black base ══
-    ctx.fillStyle='#000005';
+    // Pure pitch black
+    ctx.fillStyle='#000000';
     ctx.fillRect(0,0,W,H);
 
-    // ══ LAYER 1: Milky Way core — bright dense star-cloud band ══
-    // Diagonal band sweeping across the floor like a galaxy arm
-    const mwAngle = Math.PI * 0.28;
-    const mwCX = W*0.52, mwCY = H*0.48;
-    // Save/restore for rotated band
-    ctx.save();
-    ctx.translate(mwCX, mwCY);
-    ctx.rotate(mwAngle);
-    // Wide soft core glow
-    const mwCore = ctx.createRadialGradient(0, 0, 0, 0, 0, W*0.55);
-    mwCore.addColorStop(0,   'rgba(255,245,220,0.22)');
-    mwCore.addColorStop(0.15,'rgba(240,220,180,0.14)');
-    mwCore.addColorStop(0.35,'rgba(200,180,140,0.07)');
-    mwCore.addColorStop(0.6, 'rgba(140,120,100,0.03)');
-    mwCore.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = mwCore;
-    ctx.fillRect(-W, -H, W*2, H*2);
-    ctx.restore();
-
-    // ══ LAYER 2: Nebula cloud system — rich, swirling, multi-color ══
-    // Each nebula: multiple overlapping radial blobs to create depth + swirl
-    function nebula(cx, cy, layers) {
-      layers.forEach(([dr, dc, r, col, alpha]) => {
-        const nx = cx*W + dr*W*0.08, ny = cy*H + dc*H*0.08;
-        const g = ctx.createRadialGradient(nx, ny, 0, nx, ny, r*W);
-        g.addColorStop(0,   col.replace('A', alpha.toFixed(3)));
-        g.addColorStop(0.3, col.replace('A', (alpha*0.55).toFixed(3)));
-        g.addColorStop(0.65,col.replace('A', (alpha*0.18).toFixed(3)));
-        g.addColorStop(1,   col.replace('A', '0'));
-        ctx.fillStyle = g;
-        ctx.fillRect(0,0,W,H);
-      });
-    }
-
-    // Pillars of Creation — amber/orange towering structure
-    nebula(0.18, 0.22, [
-      [ 0.0,  0.0,  0.32, 'rgba(255,160,50,A)',  0.32],
-      [ 0.4, -0.3,  0.22, 'rgba(230,120,30,A)',  0.24],
-      [-0.5,  0.5,  0.18, 'rgba(200,90,20,A)',   0.20],
-      [ 0.0,  0.0,  0.14, 'rgba(255,200,100,A)', 0.18],
-    ]);
-
-    // Blue-white Orion-style emission nebula
-    nebula(0.72, 0.18, [
-      [ 0.0,  0.0,  0.30, 'rgba(80,160,255,A)',  0.28],
-      [-0.4,  0.3,  0.22, 'rgba(40,120,220,A)',  0.22],
-      [ 0.5, -0.2,  0.16, 'rgba(120,200,255,A)', 0.20],
-      [ 0.0,  0.0,  0.10, 'rgba(200,230,255,A)', 0.15],
-    ]);
-
-    // Deep rose/magenta — Carina-style
-    nebula(0.48, 0.78, [
-      [ 0.0,  0.0,  0.35, 'rgba(220,60,140,A)',  0.25],
-      [ 0.5,  0.4,  0.22, 'rgba(180,40,110,A)',  0.20],
-      [-0.4, -0.5,  0.20, 'rgba(255,100,160,A)', 0.18],
-      [ 0.0,  0.0,  0.12, 'rgba(255,140,200,A)', 0.14],
-    ]);
-
-    // Teal/cyan — Helix-style ring nebula glow
-    nebula(0.82, 0.60, [
-      [ 0.0,  0.0,  0.26, 'rgba(20,200,190,A)',  0.22],
-      [-0.3,  0.4,  0.18, 'rgba(0,160,160,A)',   0.18],
-      [ 0.4, -0.3,  0.14, 'rgba(80,230,220,A)',  0.16],
-    ]);
-
-    // Purple/violet — dark molecular cloud
-    nebula(0.12, 0.65, [
-      [ 0.0,  0.0,  0.30, 'rgba(110,30,160,A)',  0.30],
-      [ 0.5,  0.3,  0.20, 'rgba(80,20,130,A)',   0.22],
-      [-0.3, -0.4,  0.16, 'rgba(160,60,200,A)',  0.18],
-      [ 0.0,  0.0,  0.10, 'rgba(200,120,255,A)', 0.12],
-    ]);
-
-    // Green/emerald — exotic emission
-    nebula(0.62, 0.42, [
-      [ 0.0,  0.0,  0.22, 'rgba(40,200,80,A)',   0.18],
-      [ 0.4,  0.3,  0.16, 'rgba(20,160,60,A)',   0.14],
-      [-0.3, -0.4,  0.12, 'rgba(100,230,140,A)', 0.12],
-    ]);
-
-    // Gold/amber secondary arm
-    nebula(0.35, 0.45, [
-      [ 0.0,  0.0,  0.24, 'rgba(255,190,40,A)',  0.16],
-      [ 0.3, -0.4,  0.16, 'rgba(220,150,20,A)',  0.12],
-      [-0.4,  0.3,  0.12, 'rgba(255,220,100,A)', 0.10],
-    ]);
-
-    // ══ LAYER 3: Nebula wisp streaks — directional brush strokes ══
-    const wisps = [
-      // [x0,y0, cpx1,cpy1, cpx2,cpy2, x1,y1, color, alpha, lineWidth]
-      [0.05,0.10, 0.30,0.05, 0.55,0.25, 0.80,0.15, 'rgba(255,150,50,A)', 0.12, 3.5],
-      [0.10,0.80, 0.35,0.70, 0.60,0.90, 0.90,0.75, 'rgba(80,160,255,A)', 0.10, 2.8],
-      [0.20,0.30, 0.45,0.55, 0.65,0.25, 0.88,0.50, 'rgba(220,60,140,A)', 0.08, 3.0],
-      [0.02,0.50, 0.25,0.30, 0.55,0.70, 0.75,0.40, 'rgba(20,200,190,A)', 0.09, 2.5],
-      [0.60,0.05, 0.50,0.30, 0.80,0.45, 0.95,0.30, 'rgba(110,30,160,A)', 0.11, 4.0],
-      [0.15,0.95, 0.40,0.80, 0.65,0.95, 0.92,0.88, 'rgba(255,190,40,A)', 0.08, 2.2],
-      [0.00,0.25, 0.20,0.50, 0.40,0.20, 0.60,0.55, 'rgba(200,230,255,A)',0.07, 1.8],
-      [0.40,0.98, 0.55,0.75, 0.75,0.85, 0.98,0.65, 'rgba(40,200,80,A)',  0.08, 2.0],
-    ];
-    wisps.forEach(([x0,y0,cpx1,cpy1,cpx2,cpy2,x1,y1,col,al,lw])=>{
-      for(let pass=0; pass<3; pass++){
-        ctx.beginPath();
-        ctx.moveTo(x0*W+pass*8, y0*H+pass*5);
-        ctx.bezierCurveTo(cpx1*W,cpy1*H, cpx2*W,cpy2*H, x1*W+pass*6,y1*H+pass*4);
-        ctx.strokeStyle = col.replace('A', (al*(1-pass*0.3)).toFixed(3));
-        ctx.lineWidth = lw * (1 + pass * 0.8);
-        ctx.stroke();
-      }
-    });
-
-    // ══ LAYER 4: Dense star field — thousands of stars ══
-    // Background faint stars
-    for(let i=0;i<3500;i++){
+    // ── Faint background stars — tiny dim points ──
+    for(let i=0;i<4000;i++){
       const sx=Math.random()*W, sy=Math.random()*H;
-      const sr=Math.random()*0.9;
-      const lum=Math.random();
+      const sr=Math.random()*0.8;
+      const b=Math.random();
       let sc;
-      if(lum>0.92)      sc=`rgba(255,255,255,${(0.7+Math.random()*0.3).toFixed(2)})`;
-      else if(lum>0.80) sc=`rgba(210,230,255,${(0.4+Math.random()*0.4).toFixed(2)})`;
-      else if(lum>0.65) sc=`rgba(255,240,200,${(0.3+Math.random()*0.3).toFixed(2)})`;
-      else if(lum>0.50) sc=`rgba(180,200,255,${(0.2+Math.random()*0.25).toFixed(2)})`;
-      else              sc=`rgba(160,180,220,${(0.08+Math.random()*0.15).toFixed(2)})`;
+      if(b>0.93)      sc=`rgba(255,255,255,${(0.6+Math.random()*0.4).toFixed(2)})`;
+      else if(b>0.82) sc=`rgba(210,230,255,${(0.35+Math.random()*0.35).toFixed(2)})`;
+      else if(b>0.68) sc=`rgba(255,240,200,${(0.22+Math.random()*0.28).toFixed(2)})`;
+      else if(b>0.52) sc=`rgba(180,200,255,${(0.12+Math.random()*0.18).toFixed(2)})`;
+      else            sc=`rgba(200,200,220,${(0.04+Math.random()*0.09).toFixed(2)})`;
       ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2);
       ctx.fillStyle=sc; ctx.fill();
     }
 
-    // Bright foreground stars with glow halos
-    for(let i=0;i<180;i++){
+    // ── Bright stars with glow halos ──
+    for(let i=0;i<200;i++){
       const sx=Math.random()*W, sy=Math.random()*H;
-      const sr=1.2+Math.random()*3.5;
-      // Glow halo
-      const halo=ctx.createRadialGradient(sx,sy,0,sx,sy,sr*5);
+      const sr=1.0+Math.random()*3.0;
+      const halo=ctx.createRadialGradient(sx,sy,0,sx,sy,sr*6);
       const pick=Math.random();
       let hc;
-      if(pick>0.7)      hc='rgba(200,220,255,';
-      else if(pick>0.4) hc='rgba(255,240,200,';
-      else              hc='rgba(255,180,100,';
-      halo.addColorStop(0, hc+'0.9)');
-      halo.addColorStop(0.3, hc+'0.35)');
-      halo.addColorStop(0.7, hc+'0.10)');
+      if(pick>0.65) hc='rgba(200,220,255,';
+      else if(pick>0.35) hc='rgba(255,245,200,';
+      else hc='rgba(255,200,150,';
+      halo.addColorStop(0,   hc+'0.85)');
+      halo.addColorStop(0.25,hc+'0.30)');
+      halo.addColorStop(0.6, hc+'0.08)');
       halo.addColorStop(1,   hc+'0)');
       ctx.fillStyle=halo;
-      ctx.beginPath(); ctx.arc(sx,sy,sr*5,0,Math.PI*2); ctx.fill();
-      // Core dot
-      ctx.fillStyle=`rgba(255,255,255,0.95)`;
-      ctx.beginPath(); ctx.arc(sx,sy,sr*0.5,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx,sy,sr*6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.98)';
+      ctx.beginPath(); ctx.arc(sx,sy,sr*0.4,0,Math.PI*2); ctx.fill();
     }
 
-    // ══ LAYER 5: 4-point star glints — brightest stars ══
-    for(let i=0;i<90;i++){
+    // ── 4-point star glints ──
+    for(let i=0;i<100;i++){
       const gx=Math.random()*W, gy=Math.random()*H;
-      const gl=6+Math.random()*24;
-      const ga=0.5+Math.random()*0.45;
+      const gl=5+Math.random()*22;
+      const ga=0.45+Math.random()*0.50;
       const pick=Math.random();
       let gc;
       if(pick>0.6) gc='rgba(255,255,255,';
       else if(pick>0.3) gc='rgba(200,230,255,';
-      else gc='rgba(255,230,160,';
+      else gc='rgba(255,235,160,';
       ctx.save();
       ctx.globalAlpha=ga;
-      // Main cross
-      ctx.strokeStyle=gc+'0.95)'; ctx.lineWidth=1.2;
+      ctx.strokeStyle=gc+'0.95)'; ctx.lineWidth=1.0;
       ctx.beginPath(); ctx.moveTo(gx-gl,gy); ctx.lineTo(gx+gl,gy); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(gx,gy-gl); ctx.lineTo(gx,gy+gl); ctx.stroke();
-      // Diagonal faint arms
-      ctx.globalAlpha=ga*0.35; ctx.lineWidth=0.6;
-      ctx.beginPath(); ctx.moveTo(gx-gl*0.65,gy-gl*0.65); ctx.lineTo(gx+gl*0.65,gy+gl*0.65); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(gx+gl*0.65,gy-gl*0.65); ctx.lineTo(gx-gl*0.65,gy+gl*0.65); ctx.stroke();
+      ctx.globalAlpha=ga*0.3; ctx.lineWidth=0.5;
+      ctx.beginPath(); ctx.moveTo(gx-gl*0.6,gy-gl*0.6); ctx.lineTo(gx+gl*0.6,gy+gl*0.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gx+gl*0.6,gy-gl*0.6); ctx.lineTo(gx-gl*0.6,gy+gl*0.6); ctx.stroke();
       ctx.restore();
     }
 
-    // ══ LAYER 6: Hebrew Sacred Names — יהוה + יהושע as glowing star-text ══
+    // ── Hebrew Sacred Names — יהוה + יהושע glowing like stars ──
     const YAHUAH  = '\u05D9\u05D4\u05D5\u05D4';
     const YAHUSHA = '\u05D9\u05D4\u05D5\u05E9\u05E2';
 
-    // Each entry: [x_frac, y_frac, text, fontSize, alpha, innerColor, glowColor]
+    // [x, y, text, size, alpha, letterColor, glowColor]
     const names=[
-      [0.10, 0.08, YAHUAH,  130, 0.65, 'rgba(255,250,220,A)', 'rgba(255,240,140,A)'],
-      [0.58, 0.06, YAHUSHA, 105, 0.55, 'rgba(180,215,255,A)', 'rgba(100,180,255,A)'],
-      [0.84, 0.16, YAHUAH,   88, 0.40, 'rgba(255,200,255,A)', 'rgba(200,100,255,A)'],
-      [0.06, 0.38, YAHUSHA, 110, 0.52, 'rgba(160,255,210,A)', 'rgba(40,200,150,A)'],
-      [0.40, 0.25, YAHUAH,   82, 0.32, 'rgba(255,230,160,A)', 'rgba(255,180,40,A)'],
-      [0.74, 0.30, YAHUSHA,  95, 0.45, 'rgba(200,200,255,A)', 'rgba(120,120,255,A)'],
-      [0.22, 0.55, YAHUAH,  108, 0.50, 'rgba(255,225,190,A)', 'rgba(255,160,80,A)'],
-      [0.66, 0.52, YAHUSHA,  78, 0.30, 'rgba(170,250,230,A)', 'rgba(40,220,190,A)'],
-      [0.91, 0.50, YAHUAH,   88, 0.40, 'rgba(240,190,255,A)', 'rgba(180,60,220,A)'],
-      [0.14, 0.73, YAHUSHA, 102, 0.48, 'rgba(200,230,255,A)', 'rgba(80,160,240,A)'],
-      [0.50, 0.70, YAHUAH,  118, 0.58, 'rgba(255,255,210,A)', 'rgba(255,245,130,A)'],
-      [0.78, 0.74, YAHUSHA,  86, 0.37, 'rgba(230,160,255,A)', 'rgba(160,40,220,A)'],
-      [0.30, 0.88, YAHUAH,   80, 0.34, 'rgba(180,220,255,A)', 'rgba(80,160,255,A)'],
-      [0.64, 0.90, YAHUSHA, 100, 0.50, 'rgba(255,210,185,A)', 'rgba(255,140,80,A)'],
-      [0.90, 0.86, YAHUAH,   74, 0.28, 'rgba(210,245,200,A)', 'rgba(80,200,80,A)'],
-      [0.36, 0.13, YAHUAH,   65, 0.24, 'rgba(200,210,255,A)', 'rgba(100,130,255,A)'],
-      [0.93, 0.64, YAHUSHA,  70, 0.27, 'rgba(255,230,175,A)', 'rgba(255,190,60,A)'],
-      [0.03, 0.57, YAHUAH,   60, 0.22, 'rgba(170,245,240,A)', 'rgba(30,200,200,A)'],
-      [0.75, 0.08, YAHUSHA,  62, 0.24, 'rgba(245,195,245,A)', 'rgba(200,80,200,A)'],
-      [0.46, 0.95, YAHUAH,   68, 0.26, 'rgba(255,255,220,A)', 'rgba(255,250,150,A)'],
+      [0.10, 0.08, YAHUAH,  130, 0.80, 'rgba(255,255,200,A)', 'rgba(255,245,120,A)'],
+      [0.58, 0.06, YAHUSHA, 105, 0.72, 'rgba(180,220,255,A)', 'rgba(80,170,255,A)'],
+      [0.84, 0.16, YAHUAH,   88, 0.60, 'rgba(255,190,255,A)', 'rgba(200,80,255,A)'],
+      [0.06, 0.38, YAHUSHA, 110, 0.70, 'rgba(150,255,210,A)', 'rgba(30,200,140,A)'],
+      [0.40, 0.25, YAHUAH,   82, 0.55, 'rgba(255,235,150,A)', 'rgba(255,190,30,A)'],
+      [0.74, 0.30, YAHUSHA,  95, 0.65, 'rgba(190,200,255,A)', 'rgba(100,110,255,A)'],
+      [0.22, 0.55, YAHUAH,  108, 0.75, 'rgba(255,225,180,A)', 'rgba(255,155,60,A)'],
+      [0.66, 0.52, YAHUSHA,  78, 0.50, 'rgba(160,255,230,A)', 'rgba(20,220,180,A)'],
+      [0.91, 0.50, YAHUAH,   88, 0.58, 'rgba(230,185,255,A)', 'rgba(170,50,230,A)'],
+      [0.14, 0.73, YAHUSHA, 102, 0.68, 'rgba(190,230,255,A)', 'rgba(70,155,240,A)'],
+      [0.50, 0.70, YAHUAH,  118, 0.78, 'rgba(255,255,205,A)', 'rgba(255,248,110,A)'],
+      [0.78, 0.74, YAHUSHA,  86, 0.55, 'rgba(230,155,255,A)', 'rgba(155,30,225,A)'],
+      [0.30, 0.88, YAHUAH,   80, 0.52, 'rgba(175,220,255,A)', 'rgba(70,155,255,A)'],
+      [0.64, 0.90, YAHUSHA, 100, 0.70, 'rgba(255,215,180,A)', 'rgba(255,140,70,A)'],
+      [0.90, 0.86, YAHUAH,   74, 0.45, 'rgba(205,248,195,A)', 'rgba(70,205,70,A)'],
+      [0.36, 0.13, YAHUAH,   65, 0.42, 'rgba(195,210,255,A)', 'rgba(90,125,255,A)'],
+      [0.93, 0.64, YAHUSHA,  70, 0.48, 'rgba(255,232,170,A)', 'rgba(255,195,50,A)'],
+      [0.03, 0.57, YAHUAH,   60, 0.38, 'rgba(165,248,238,A)', 'rgba(20,205,195,A)'],
+      [0.75, 0.08, YAHUSHA,  62, 0.42, 'rgba(248,190,248,A)', 'rgba(205,70,205,A)'],
+      [0.46, 0.95, YAHUAH,   68, 0.44, 'rgba(255,255,215,A)', 'rgba(255,252,140,A)'],
     ];
 
-    names.forEach(([xf,yf,txt,sz,al,innerCol,glowCol])=>{
+    names.forEach(([xf,yf,txt,sz,al,letterCol,glowCol])=>{
       const tx=xf*W, ty=yf*H;
       ctx.save();
 
-      // Outer wide glow — large soft bloom
-      const outerR = sz * 3.5;
-      const outerG = ctx.createRadialGradient(tx,ty,0,tx,ty,outerR);
-      outerG.addColorStop(0,   glowCol.replace('A',(al*0.35).toFixed(3)));
-      outerG.addColorStop(0.4, glowCol.replace('A',(al*0.12).toFixed(3)));
-      outerG.addColorStop(1,   glowCol.replace('A','0'));
-      ctx.fillStyle=outerG;
-      ctx.beginPath(); ctx.arc(tx,ty,outerR,0,Math.PI*2); ctx.fill();
+      // Bloom aura
+      const auraR=sz*3.8;
+      const aura=ctx.createRadialGradient(tx,ty,0,tx,ty,auraR);
+      aura.addColorStop(0,   glowCol.replace('A',(al*0.28).toFixed(3)));
+      aura.addColorStop(0.35,glowCol.replace('A',(al*0.10).toFixed(3)));
+      aura.addColorStop(1,   glowCol.replace('A','0'));
+      ctx.fillStyle=aura;
+      ctx.beginPath(); ctx.arc(tx,ty,auraR,0,Math.PI*2); ctx.fill();
 
       ctx.font=`bold ${sz}px serif`;
       ctx.textAlign='center';
       ctx.textBaseline='middle';
 
-      // Pass 1: wide glow shadow
-      ctx.shadowColor = glowCol.replace('A','1');
-      ctx.shadowBlur  = sz * 2.0;
-      ctx.fillStyle   = glowCol.replace('A',(al*0.25).toFixed(3));
-      ctx.fillText(txt, tx, ty);
+      // Wide glow pass
+      ctx.shadowColor=glowCol.replace('A','1');
+      ctx.shadowBlur=sz*2.2;
+      ctx.fillStyle=glowCol.replace('A',(al*0.22).toFixed(3));
+      ctx.fillText(txt,tx,ty);
 
-      // Pass 2: medium glow
-      ctx.shadowBlur  = sz * 0.9;
-      ctx.fillStyle   = innerCol.replace('A',(al*0.6).toFixed(3));
-      ctx.fillText(txt, tx, ty);
+      // Mid glow pass
+      ctx.shadowBlur=sz*1.0;
+      ctx.fillStyle=letterCol.replace('A',(al*0.65).toFixed(3));
+      ctx.fillText(txt,tx,ty);
 
-      // Pass 3: bright core
-      ctx.shadowBlur  = sz * 0.25;
-      ctx.fillStyle   = innerCol.replace('A', Math.min(al+0.3, 0.98).toFixed(3));
-      ctx.fillText(txt, tx, ty);
+      // Sharp bright core
+      ctx.shadowBlur=sz*0.3;
+      ctx.fillStyle=letterCol.replace('A',Math.min(al+0.18,0.98).toFixed(3));
+      ctx.fillText(txt,tx,ty);
 
       ctx.restore();
     });
-
-    // ══ LAYER 7: Copper/rose-gold epoxy veins (subtle, underneath the stars) ══
-    const veins=['rgba(200,130,70,A)','rgba(212,145,158,A)','rgba(230,160,90,A)',
-                 'rgba(190,110,130,A)','rgba(245,195,120,A)'];
-    for(let i=0;i<50;i++){
-      const col=veins[i%veins.length];
-      const al=(0.03+Math.sin(i*1.3)*0.02).toFixed(3);
-      ctx.beginPath();
-      ctx.moveTo(Math.random()*W,Math.random()*H);
-      ctx.bezierCurveTo(Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H,Math.random()*W,Math.random()*H);
-      ctx.strokeStyle=col.replace('A',al); ctx.lineWidth=1+Math.random()*3; ctx.stroke();
-    }
-
-    // ══ LAYER 8: Gloss sheen — keep the epoxy wet-look ══
-    const gloss=ctx.createRadialGradient(W*0.40,H*0.35,0,W*0.5,H*0.5,W*0.72);
-    gloss.addColorStop(0,'rgba(255,255,255,0.04)');
-    gloss.addColorStop(0.5,'rgba(200,200,220,0.015)');
-    gloss.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=gloss; ctx.fillRect(0,0,W,H);
 
   });
 }
@@ -532,7 +398,7 @@ function addBox(w,h,d,mat,px,py,pz,ry=0){
 }
 
 // Floor & ceiling
-const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.18,metalness:0.55,envMapIntensity:0.8,emissive:new THREE.Color(0.01,0.005,0.02),emissiveIntensity:1.0}));
+const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeFloorTex(),roughness:0.92,metalness:0.0,envMapIntensity:0.0,emissive:new THREE.Color(0,0,0),emissiveIntensity:0.0}));
 floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,FY,0); floorMesh.receiveShadow=true; scene.add(floorMesh);
 const ceilMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeCeilTex(),roughness:0.80,metalness:0.10}));
 ceilMesh.rotation.x=Math.PI/2; ceilMesh.position.set(0,CY,0); scene.add(ceilMesh);
@@ -603,13 +469,7 @@ function makeLogoTex(){
 
     // -- Background - deep noir with subtle warm vignette ----------------------
     // Solid dark noir base — so logo reads cleanly on back wall
-    ctx.fillStyle='#0a0304'; ctx.fillRect(0,0,W,H);
-    // Subtle warm radial vignette over base
-    const bgG=ctx.createRadialGradient(cx,H*0.55,0,cx,H*0.55,W*0.62);
-    bgG.addColorStop(0,'rgba(28,10,12,0.0)');
-    bgG.addColorStop(0.55,'rgba(16,5,7,0.35)');
-    bgG.addColorStop(1,'rgba(4,1,2,0.65)');
-    ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
+    // transparent — no background fill
 
     // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
     const iconX=cx-1580, iconY=H*0.50, iconR=240;
@@ -735,75 +595,86 @@ function makeLogoTex(){
     // Window - right
     ctx.beginPath(); ctx.rect(hx+20*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
 
-    // -- TRUESITE text - full premium metallic render --------------------------
+    // -- TRUESITE text - floating letters, border glow, no background ----------
     const FONT_SIZE = 360;
-    ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
     const tx=cx-920, ty=H*0.60;
+    ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
 
-    // 3D extrusion - 18 layers
-    for(let i=18;i>0;i--){
-      ctx.fillStyle=`rgba(16,4,6,${0.34-i*0.016})`;
-      ctx.shadowBlur=0;
-      ctx.fillText('TRUESITE',tx+i*2.8,ty+i*2.2);
-    }
-
-    // Main metallic fill gradient - vertical sweep
-    const tg=ctx.createLinearGradient(tx,ty-FONT_SIZE*1.05,tx,ty+FONT_SIZE*0.12);
-    tg.addColorStop(0,   '#3a1218'); // shadow crown
-    tg.addColorStop(0.06,'#7a3828'); // deep copper
-    tg.addColorStop(0.16,'#c27840'); // warm copper
-    tg.addColorStop(0.28,'#eaaa70'); // bright bronze
-    tg.addColorStop(0.40,'#d4919e'); // rose gold streak
-    tg.addColorStop(0.50,'#ecb888'); // light bronze peak
-    tg.addColorStop(0.62,'#c06838'); // mid copper descent
-    tg.addColorStop(0.78,'#9a4a38'); // deeper copper
-    tg.addColorStop(1,   '#4a2020'); // shadow base
-    ctx.fillStyle=tg; ctx.shadowBlur=0;
-    ctx.fillText('TRUESITE',tx,ty);
-
-    // Specular highlight stroke - top edge light catch
-    const hiG=ctx.createLinearGradient(tx,ty-FONT_SIZE,tx+2800,ty-FONT_SIZE);
-    hiG.addColorStop(0,  'rgba(245,210,165,0)');
-    hiG.addColorStop(0.1,'rgba(255,232,195,0.45)');
-    hiG.addColorStop(0.5,'rgba(255,248,218,0.72)');
-    hiG.addColorStop(0.9,'rgba(255,232,195,0.45)');
-    hiG.addColorStop(1,  'rgba(245,210,165,0)');
-    ctx.strokeStyle=hiG; ctx.lineWidth=2.0; ctx.shadowBlur=0;
-    ctx.strokeText('TRUESITE',tx,ty);
-
-    // Second pass specular - mid-body sheen band
+    // Border glow — thick stroke with color shadow bleeding outward
+    // Pass 1: outer wide color bloom
     ctx.save();
-    ctx.globalAlpha=0.22;
-    const midG=ctx.createLinearGradient(tx,ty-FONT_SIZE*0.55,tx,ty-FONT_SIZE*0.35);
-    midG.addColorStop(0,'rgba(255,235,195,0)');
-    midG.addColorStop(0.5,'rgba(255,245,215,1)');
-    midG.addColorStop(1,'rgba(255,235,195,0)');
-    ctx.fillStyle=midG;
-    ctx.fillText('TRUESITE',tx,ty);
+    ctx.shadowColor='rgba(212,145,100,1)';
+    ctx.shadowBlur=80;
+    ctx.strokeStyle='rgba(232,168,100,0.55)';
+    ctx.lineWidth=28;
+    ctx.lineJoin='round';
+    ctx.strokeText('TRUESITE',tx,ty);
     ctx.restore();
 
-    // -- TECHNOLOGIES subtext -------------------------------------------------
+    // Pass 2: tighter bright glow ring
+    ctx.save();
+    ctx.shadowColor='rgba(255,220,160,1)';
+    ctx.shadowBlur=28;
+    ctx.strokeStyle='rgba(255,215,140,0.88)';
+    ctx.lineWidth=8;
+    ctx.lineJoin='round';
+    ctx.strokeText('TRUESITE',tx,ty);
+    ctx.restore();
+
+    // Pass 3: main metallic fill on top of the glow
+    const tg=ctx.createLinearGradient(tx,ty-FONT_SIZE*1.05,tx,ty+FONT_SIZE*0.12);
+    tg.addColorStop(0,   '#c07840');
+    tg.addColorStop(0.20,'#eaaa70');
+    tg.addColorStop(0.40,'#d4919e');
+    tg.addColorStop(0.55,'#ecb888');
+    tg.addColorStop(0.80,'#c06838');
+    tg.addColorStop(1,   '#9a4a38');
+    ctx.shadowBlur=0;
+    ctx.fillStyle=tg;
+    ctx.fillText('TRUESITE',tx,ty);
+
+    // Pass 4: inner specular edge
+    ctx.save();
+    ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(255,248,218,0.55)';
+    ctx.lineWidth=1.5;
+    ctx.strokeText('TRUESITE',tx,ty);
+    ctx.restore();
+
+    // -- TECHNOLOGIES subtext — floating glow letters -------------------------
     const SUB_SIZE=148;
-    ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
     const subx=cx-900, suby=ty+160;
+    ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
 
-    // Extrusion
-    for(let i=7;i>0;i--){
-      ctx.fillStyle=`rgba(16,4,6,${0.26-i*0.025})`; ctx.shadowBlur=0;
-      ctx.fillText('TECHNOLOGIES',subx+i,suby+i);
-    }
-    const sg=ctx.createLinearGradient(subx,suby-SUB_SIZE*1.0,subx,suby+SUB_SIZE*0.12);
-    sg.addColorStop(0,  '#5a2828');
-    sg.addColorStop(0.18,'#b87040');
-    sg.addColorStop(0.42,'#d4919e');
-    sg.addColorStop(0.68,'#c07038');
-    sg.addColorStop(1,  '#782828');
-    ctx.fillStyle=sg; ctx.shadowBlur=0;
-    ctx.fillText('TECHNOLOGIES',subx,suby);
-
-    // Subtext specular
-    ctx.strokeStyle='rgba(245,200,155,0.28)'; ctx.lineWidth=1.4; ctx.shadowBlur=0;
+    // Outer glow
+    ctx.save();
+    ctx.shadowColor='rgba(212,145,100,1)';
+    ctx.shadowBlur=45;
+    ctx.strokeStyle='rgba(232,168,100,0.45)';
+    ctx.lineWidth=14;
+    ctx.lineJoin='round';
     ctx.strokeText('TECHNOLOGIES',subx,suby);
+    ctx.restore();
+
+    // Tight glow ring
+    ctx.save();
+    ctx.shadowColor='rgba(255,220,160,1)';
+    ctx.shadowBlur=18;
+    ctx.strokeStyle='rgba(255,215,140,0.80)';
+    ctx.lineWidth=4;
+    ctx.lineJoin='round';
+    ctx.strokeText('TECHNOLOGIES',subx,suby);
+    ctx.restore();
+
+    // Fill
+    const sg=ctx.createLinearGradient(subx,suby-SUB_SIZE*1.0,subx,suby+SUB_SIZE*0.12);
+    sg.addColorStop(0,  '#b87040');
+    sg.addColorStop(0.35,'#d4919e');
+    sg.addColorStop(0.65,'#c07038');
+    sg.addColorStop(1,  '#9a4838');
+    ctx.shadowBlur=0;
+    ctx.fillStyle=sg;
+    ctx.fillText('TECHNOLOGIES',subx,suby);
 
     // -- UNDERGLOW - multi-layer premium backlight -----------------------------
     // Deep radial halo
@@ -856,7 +727,7 @@ function makeLogoTex(){
 
 const logoPlane=new THREE.Mesh(
   new THREE.PlaneGeometry(RW*0.80,RH*0.38),
-  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:false,depthWrite:true})
+  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,alphaTest:0.01,depthWrite:false})
 );
 logoPlane.position.set(0,FY+RH*0.75,-RD/2+0.12); scene.add(logoPlane);
 const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.72,-RD/2+1.5); scene.add(logoGlow);

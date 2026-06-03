@@ -204,7 +204,7 @@ function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
   });
 }
 function makeFloorTex(){
-  return mkTex(4096,4096,(ctx,W,H)=>{
+  return mkTex(8192,8192,(ctx,W,H)=>{
 
     // Pure pitch black
     ctx.fillStyle='#000000';
@@ -398,8 +398,13 @@ function addBox(w,h,d,mat,px,py,pz,ry=0){
 }
 
 // Floor & ceiling
-const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshBasicMaterial({map:makeFloorTex()}));
+(()=>{
+const fTex=makeFloorTex();
+fTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+fTex.needsUpdate=true;
+const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:fTex,roughness:0.04,metalness:0.85,envMapIntensity:1.2}));
 floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,FY,0); floorMesh.receiveShadow=true; scene.add(floorMesh);
+})();
 const ceilMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeCeilTex(),roughness:0.80,metalness:0.10}));
 ceilMesh.rotation.x=Math.PI/2; ceilMesh.position.set(0,CY,0); scene.add(ceilMesh);
 // Emissive LED strip tubes along coffer ribs

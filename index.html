@@ -105,44 +105,90 @@ function paintRing(ctx,w,h,css,fontScale=1.0){
 }
 
 // --- GLOBE BUILDER ------------------------------------------------------------
+// ── InstancedMesh globe — 2 draw calls instead of N ─────────────────────────
+// Reusable scratch objects (never recreated — zero GC)
+const _iDummy=new THREE.Object3D();
+const _iAx=new THREE.Vector3(), _iQs=new THREE.Quaternion(), _iQb=new THREE.Quaternion();
+
 function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
   const group = new THREE.Group();
-  const PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
-  // Petal size scales inversely with density so surface coverage stays consistent
+  const PHI_SQ=Math.PI*(3-Math.sqrt(5));
   const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*petalScale, 2*Math.sin(0.4)*petalScale);
+
+  // Shared materials — 1 CW, 1 CCW (not N unique materials)
+  const matCW = new THREE.MeshStandardMaterial({
+    map:cwTex, emissiveMap:cwTex, emissive:new THREE.Color(1,1,1),
+    emissiveIntensity:0.02, transparent:true, opacity:0.28,
+    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
+    roughness:0.0, metalness:0.0, toneMapped:false
+  });
+  const matCCW = new THREE.MeshStandardMaterial({
+    map:ccwTex, emissiveMap:ccwTex, emissive:new THREE.Color(1,1,1),
+    emissiveIntensity:0.02, transparent:true, opacity:0.28,
+    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
+    roughness:0.0, metalness:0.0, toneMapped:false
+  });
+
+  // Split petals into CW and CCW arrays
+  const cwData=[], ccwData=[];
   for(let i=0;i<N;i++){
     const y=1-(i/(N-1))*2, r2=Math.sqrt(Math.max(0,1-y*y)), theta=PHI_SQ*i;
     const pole=new THREE.Vector3(r2*Math.cos(theta),y,r2*Math.sin(theta)).normalize();
-    const isCW=i%2===0;
-    const mat=new THREE.MeshStandardMaterial({
-      map:isCW?cwTex:ccwTex,
-      emissiveMap:isCW?cwTex:ccwTex,
-      emissive:new THREE.Color(1,1,1),
-      emissiveIntensity:0.02,
-      transparent:true, opacity:0.28,
-      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
-      roughness:0.0, metalness:0.0, toneMapped:false
-    });
-    const mesh=new THREE.Mesh(geo,mat);
-    mesh.position.copy(pole.clone().multiplyScalar(0.01));
     const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),pole);
-    mesh.quaternion.copy(q);
     const pm=(PHI*(i+1))%1;
-    mesh.userData={pole,isCW,baseQ:q.clone(),spd:0.003+pm*0.002,ph:(PHI*i*2.3)%(Math.PI*2),sf:0.4+pm*1.2};
-    group.add(mesh); meshes.push(mesh);
+    const entry={pole,baseQ:q.clone(),spd:0.003+pm*0.002};
+    if(i%2===0) cwData.push(entry); else ccwData.push(entry);
   }
+
+  // Two InstancedMesh — one per material (2 draw calls total per globe)
+  const imCW  = new THREE.InstancedMesh(geo, matCW,  cwData.length);
+  const imCCW = new THREE.InstancedMesh(geo, matCCW, ccwData.length);
+  imCW.frustumCulled  = false;
+  imCCW.frustumCulled = false;
+
+  // Set initial matrices
+  const _d=_iDummy;
+  cwData.forEach((e,i)=>{
+    _d.position.copy(e.pole).multiplyScalar(0.01);
+    _d.quaternion.copy(e.baseQ); _d.scale.setScalar(1); _d.updateMatrix();
+    imCW.setMatrixAt(i, _d.matrix);
+  });
+  ccwData.forEach((e,i)=>{
+    _d.position.copy(e.pole).multiplyScalar(0.01);
+    _d.quaternion.copy(e.baseQ); _d.scale.setScalar(1); _d.updateMatrix();
+    imCCW.setMatrixAt(i, _d.matrix);
+  });
+  imCW.instanceMatrix.needsUpdate  = true;
+  imCCW.instanceMatrix.needsUpdate = true;
+
+  group.add(imCW); group.add(imCCW);
   group.scale.setScalar(scale);
-  group.userData={meshes};
+  // Store data for animGlobe
+  group.userData = { imCW, imCCW, cwData, ccwData, matCW, matCCW };
   return group;
 }
-// Reusable temp objects for animGlobe — allocated once, never GC'd
-const _animAx=new THREE.Vector3(), _animQs=new THREE.Quaternion(), _animQb=new THREE.Quaternion();
+
 function animGlobe(group, t){
-  group.userData.meshes.forEach(m=>{
-    const{pole,isCW,baseQ,spd}=m.userData;
-    _animAx.copy(pole); _animQs.setFromAxisAngle(_animAx,t*(isCW?spd:-spd));
-    m.quaternion.copy(_animQb.copy(baseQ).premultiply(_animQs));
+  const{imCW,imCCW,cwData,ccwData}=group.userData;
+  const _d=_iDummy;
+  cwData.forEach((e,i)=>{
+    _iAx.copy(e.pole);
+    _iQs.setFromAxisAngle(_iAx, t*e.spd);
+    _d.position.copy(e.pole).multiplyScalar(0.01);
+    _d.quaternion.copy(_iQb.copy(e.baseQ).premultiply(_iQs));
+    _d.scale.setScalar(1); _d.updateMatrix();
+    imCW.setMatrixAt(i, _d.matrix);
   });
+  imCW.instanceMatrix.needsUpdate = true;
+  ccwData.forEach((e,i)=>{
+    _iAx.copy(e.pole);
+    _iQs.setFromAxisAngle(_iAx, -t*e.spd);
+    _d.position.copy(e.pole).multiplyScalar(0.01);
+    _d.quaternion.copy(_iQb.copy(e.baseQ).premultiply(_iQs));
+    _d.scale.setScalar(1); _d.updateMatrix();
+    imCCW.setMatrixAt(i, _d.matrix);
+  });
+  imCCW.instanceMatrix.needsUpdate = true;
 }
 
 // --- SCENE SETUP --------------------------------------------------------------
@@ -2021,7 +2067,7 @@ const ray=new THREE.Raycaster();
 canvas.addEventListener('click',e=>{
   if(isDrag)return;
   ray.setFromCamera(mouse,camera);
-  const hits=ray.intersectObjects(seats.map(s=>s.userData.hit));
+  const hits=ray.intersectObjects(_hitTargets);
   if(!hits.length)return;
   const m=hits[0].object.userData.member;
   const el=document.getElementById('info');
@@ -2032,6 +2078,8 @@ canvas.addEventListener('click',e=>{
 // --- ANIMATE LOOP -------------------------------------------------------------
 const clock=new THREE.Clock();
 let lastColorUpdate=-1;
+// Pre-allocate raycaster hit targets once — prevents per-frame array GC
+const _hitTargets=seats.map(s=>s.userData.hit);
 renderer.setAnimationLoop(()=>{
   if(window._nitroBialUpdate) window._nitroBialUpdate();
   const t=clock.getElapsedTime(); const delta=clock.getDelta?clock.getDelta():0.016;
@@ -2076,7 +2124,7 @@ renderer.setAnimationLoop(()=>{
   });
   // hover tooltip
   ray.setFromCamera(mouse,camera);
-  const hits=ray.intersectObjects(seats.map(s=>s.userData.hit));
+  const hits=ray.intersectObjects(_hitTargets);
   const tip=document.getElementById('tooltip');
   if(hits.length){
     const m=hits[0].object.userData.member;

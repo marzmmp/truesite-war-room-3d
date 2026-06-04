@@ -1855,8 +1855,8 @@ const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
 srcTexCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16; srcTexCW.generateMipmaps=true;
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
 srcTexCCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16; srcTexCCW.generateMipmaps=true;
-const sourceGlobe=makeGlobe(1.8,srcTexCW,srcTexCCW,240,1.08);
-sourceGlobe.position.set(0,1.6,0); scene.add(sourceGlobe);
+const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,240,1.08);
+sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,0.02,10); srcLight.position.set(0,2.4,0); scene.add(srcLight);
 
 // --- FAMILY SEATS -------------------------------------------------------------
@@ -2060,7 +2060,7 @@ renderer.setAnimationLoop(()=>{
     });
   }
   // source globe
-  sourceGlobe.position.y=1.6+0.06*Math.sin(t*0.3);
+  sourceGlobe.position.y=3.2+0.06*Math.sin(t*0.3);
   sourceGlobe.rotation.y=t*0.04;
   animGlobe(sourceGlobe,t);
   // seats

@@ -99,7 +99,7 @@ function paintRing(ctx,w,h,css){
 // --- GLOBE BUILDER ------------------------------------------------------------
 function makeGlobe(scale, cwTex, ccwTex){
   const group = new THREE.Group();
-  const N=256, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
+  const N=240, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
   // Slightly larger petals fill the sphere surface more densely
   const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*1.08, 2*Math.sin(0.4)*1.08);
   for(let i=0;i<N;i++){
@@ -110,8 +110,8 @@ function makeGlobe(scale, cwTex, ccwTex){
       map:isCW?cwTex:ccwTex,
       emissiveMap:isCW?cwTex:ccwTex,
       emissive:new THREE.Color(1,1,1),
-      emissiveIntensity:0.18,
-      transparent:true, opacity:0.65,
+      emissiveIntensity:0.04,
+      transparent:true, opacity:0.38,
       blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
       roughness:0.0, metalness:0.0, toneMapped:false
     });
@@ -131,8 +131,8 @@ function animGlobe(group, t){
   const ax=new THREE.Vector3(), qs=new THREE.Quaternion(), qb=new THREE.Quaternion();
   group.userData.meshes.forEach(m=>{
     const{pole,isCW,baseQ,spd,ph,sf}=m.userData;
-    m.material.opacity=0.60+0.18*(Math.sin(t*sf+ph)*0.5+0.5);
-    m.material.emissiveIntensity=0.12+0.10*(Math.sin(t*sf*1.3+ph)*0.5+0.5);
+    m.material.opacity=0.32+0.12*(Math.sin(t*sf+ph)*0.5+0.5);
+    m.material.emissiveIntensity=0.02+0.04*(Math.sin(t*sf*1.3+ph)*0.5+0.5);
     ax.copy(pole); qs.setFromAxisAngle(ax,t*(isCW?spd:-spd));
     m.quaternion.copy(qb.copy(baseQ).premultiply(qs));
   });
@@ -487,13 +487,13 @@ moldPositions.forEach(({x,z,ry,len})=>{
 });
 
 // --- LIGHTING -----------------------------------------------------------------
-scene.add(new THREE.AmbientLight(0x101010,0.8));
-const ceilFill=new THREE.PointLight(0xffd090,1.2,30); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
+scene.add(new THREE.AmbientLight(0x080808,0.4));
+const ceilFill=new THREE.PointLight(0xffd090,0.5,24); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
 // Recessed ceiling spots
 [[-6,-8],[-6,2],[6,-8],[6,2],[0,-3],[-6,-16],[6,-16]].forEach(([x,z])=>{
   const disc=new THREE.Mesh(new THREE.CircleGeometry(0.22,16),new THREE.MeshBasicMaterial({color:0xfff8e8}));
   disc.rotation.x=Math.PI/2; disc.position.set(x,CY-0.01,z); scene.add(disc);
-  const pl=new THREE.PointLight(0xffe8b0,4.0,22); pl.position.set(x,CY-0.35,z); scene.add(pl);
+  const pl=new THREE.PointLight(0xffe8b0,2.2,18); pl.position.set(x,CY-0.35,z); scene.add(pl);
 });
 
 // --- LOGO - BACK WALL ONLY ----------------------------------------------------
@@ -1850,7 +1850,7 @@ const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
 srcTexCCW.minFilter=THREE.LinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16;
 const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW);
 sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
-const srcLight=new THREE.PointLight(0xffeedd,0.6,22); srcLight.position.set(0,3.6,0); scene.add(srcLight);
+const srcLight=new THREE.PointLight(0xffeedd,0.15,14); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 
 // --- FAMILY SEATS -------------------------------------------------------------
 const MEMBERS=[

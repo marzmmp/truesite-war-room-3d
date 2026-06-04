@@ -63,28 +63,57 @@ function mkTex(w,h,draw){const c=mkCanvas(w,h);draw(c.getContext('2d'),w,h);cons
 // --- SACRED CIRCLE PAINTER ----------------------------------------------------
 function paintRing(ctx,w,h,css){
   ctx.clearRect(0,0,w,h);
-  const cx=w/2,cy=h/2,r=Math.min(w,h)*0.42,fs=11,cw=fs*0.62;
+  const cx=w/2, cy=h/2;
+  // Scale font proportionally to canvas size (base was 11px at 512px)
+  const scale=w/512;
+  const fs=Math.round(11*scale), cw=fs*0.62;
+  const r=Math.min(w,h)*0.42;
   const total=Math.floor((2*Math.PI*r)/cw);
-  ctx.font=`bold ${fs}px Courier New`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=css;
+  ctx.font=`bold ${fs}px Courier New`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+
+  // Multi-pass for crisp glow — outer glow, then sharp core
+  const cssBase=css.replace(/[\d.]+\)$/,'');
+  const alpha=parseFloat((css.match(/[\d.]+\)$/)||['1)'])[0]);
+
+  // Glow pass
+  ctx.shadowColor=css;
+  ctx.shadowBlur=fs*1.4*scale;
+  ctx.fillStyle=css.replace(/[\d.]+\)$/, (alpha*0.35).toFixed(3)+')');
   for(let i=0;i<total;i++){
     const a=(i/total)*Math.PI*2;
     ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
     ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
   }
+  // Sharp core pass
+  ctx.shadowBlur=fs*0.5*scale;
+  ctx.fillStyle=css;
+  for(let i=0;i<total;i++){
+    const a=(i/total)*Math.PI*2;
+    ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
+    ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
+  }
+  ctx.shadowBlur=0;
 }
 
 // --- GLOBE BUILDER ------------------------------------------------------------
 function makeGlobe(scale, cwTex, ccwTex){
   const group = new THREE.Group();
-  const N=128, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
-  const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*1.02, 2*Math.sin(0.4)*1.02);
+  const N=256, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
+  // Slightly larger petals fill the sphere surface more densely
+  const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*1.08, 2*Math.sin(0.4)*1.08);
   for(let i=0;i<N;i++){
     const y=1-(i/(N-1))*2, r2=Math.sqrt(Math.max(0,1-y*y)), theta=PHI_SQ*i;
     const pole=new THREE.Vector3(r2*Math.cos(theta),y,r2*Math.sin(theta)).normalize();
     const isCW=i%2===0;
-    const mat=new THREE.MeshBasicMaterial({
-      map:isCW?cwTex:ccwTex, transparent:true, opacity:0.72,
-      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide
+    const mat=new THREE.MeshStandardMaterial({
+      map:isCW?cwTex:ccwTex,
+      emissiveMap:isCW?cwTex:ccwTex,
+      emissive:new THREE.Color(1,1,1),
+      emissiveIntensity:0.55,
+      transparent:true, opacity:0.80,
+      blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
+      roughness:0.0, metalness:0.0, toneMapped:false
     });
     const mesh=new THREE.Mesh(geo,mat);
     mesh.position.copy(pole.clone().multiplyScalar(0.01));
@@ -102,7 +131,8 @@ function animGlobe(group, t){
   const ax=new THREE.Vector3(), qs=new THREE.Quaternion(), qb=new THREE.Quaternion();
   group.userData.meshes.forEach(m=>{
     const{pole,isCW,baseQ,spd,ph,sf}=m.userData;
-    m.material.opacity=0.55+0.2*(Math.sin(t*sf+ph)*0.5+0.5);
+    m.material.opacity=0.70+0.22*(Math.sin(t*sf+ph)*0.5+0.5);
+    m.material.emissiveIntensity=0.45+0.25*(Math.sin(t*sf*1.3+ph)*0.5+0.5);
     ax.copy(pole); qs.setFromAxisAngle(ax,t*(isCW?spd:-spd));
     m.quaternion.copy(qb.copy(baseQ).premultiply(qs));
   });
@@ -1810,12 +1840,14 @@ function drawFOL(t){
 const tableLight=new THREE.PointLight(0xfff4e8,3.8,16);
 tableLight.position.set(0,2.8,0); scene.add(tableLight);
 // --- SOURCE GLOBE - center hover ---------------------------------------------
-const srcCWCanvas=mkCanvas(512,512); const srcCCWCanvas=mkCanvas(512,512);
+const srcCWCanvas=mkCanvas(1024,1024); const srcCCWCanvas=mkCanvas(1024,1024);
 const srcCWCtx=srcCWCanvas.getContext('2d'); const srcCCWCtx=srcCCWCanvas.getContext('2d');
-paintRing(srcCWCtx,512,512,'rgba(255,195,120,0.95)');
-paintRing(srcCCWCtx,512,512,'rgba(210,160,100,0.82)');
+paintRing(srcCWCtx,1024,1024,'rgba(255,195,120,0.95)');
+paintRing(srcCCWCtx,1024,1024,'rgba(210,160,100,0.82)');
 const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
+srcTexCW.minFilter=THREE.LinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16;
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
+srcTexCCW.minFilter=THREE.LinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16;
 const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW);
 sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,1.6,28); srcLight.position.set(0,3.6,0); scene.add(srcLight);
@@ -1914,19 +1946,20 @@ MEMBERS.forEach((m,i)=>{
   footPlate.position.set(0, -0.443, 0); grp.add(footPlate);
   // globe
   const isPhi=m.isMarz||m.color==='orig';
-  const gc1=mkCanvas(768,768), gc2=mkCanvas(768,768);
+  const gc1=mkCanvas(1024,1024), gc2=mkCanvas(1024,1024);
   const gx1=gc1.getContext('2d'), gx2=gc2.getContext('2d');
   if(isPhi){
-    paintRing(gx1,768,768,'rgba(255,195,120,0.95)');
-    paintRing(gx2,768,768,'rgba(210,160,100,0.82)');
+    paintRing(gx1,1024,1024,'rgba(255,195,120,0.95)');
+    paintRing(gx2,1024,1024,'rgba(210,160,100,0.82)');
   } else {
     const hex=m.color.replace('#','');
     const cr=parseInt(hex.slice(0,2),16),cg=parseInt(hex.slice(2,4),16),cb=parseInt(hex.slice(4,6),16);
     const d=1/PHI;
-    paintRing(gx1,768,768,`rgba(${cr},${cg},${cb},0.95)`);
-    paintRing(gx2,768,768,`rgba(${Math.round(cr*d)},${Math.round(cg*d)},${Math.round(cb*d)},0.82)`);
+    paintRing(gx1,1024,1024,`rgba(${cr},${cg},${cb},0.95)`);
+    paintRing(gx2,1024,1024,`rgba(${Math.round(cr*d)},${Math.round(cg*d)},${Math.round(cb*d)},0.82)`);
   }
-  const gt1=new THREE.CanvasTexture(gc1), gt2=new THREE.CanvasTexture(gc2);
+  const gt1=new THREE.CanvasTexture(gc1); gt1.minFilter=THREE.LinearFilter; gt1.magFilter=THREE.LinearFilter; gt1.anisotropy=16;
+  const gt2=new THREE.CanvasTexture(gc2); gt2.minFilter=THREE.LinearFilter; gt2.magFilter=THREE.LinearFilter; gt2.anisotropy=16;
   const gs=m.isMarz?0.46:0.35;
   const globe=makeGlobe(gs,gt1,gt2);
   globe.position.set(0,1.90,-0.08);
@@ -2008,15 +2041,15 @@ renderer.setAnimationLoop(()=>{
     const{r,g,b}=getColor(t); const d=1/PHI;
     const cwCSS=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.95)`;
     const ccwCSS=`rgba(${Math.round(r*d)},${Math.round(g*d)},${Math.round(b*d)},0.82)`;
-    paintRing(srcCWCtx,512,512,cwCSS); srcTexCW.needsUpdate=true;
-    paintRing(srcCCWCtx,512,512,ccwCSS); srcTexCCW.needsUpdate=true;
+    paintRing(srcCWCtx,1024,1024,cwCSS); srcTexCW.needsUpdate=true;
+    paintRing(srcCCWCtx,1024,1024,ccwCSS); srcTexCCW.needsUpdate=true;
     srcLight.color.setRGB(r/255,g/255,b/255);
     // update phi-cycle sibling globes
     seats.forEach(s=>{
       const g2=s.userData.globe;
       if(!g2||!g2.userData.isPhi)return;
-      paintRing(g2.userData.cwCtx,512,512,cwCSS); g2.userData.cwTex.needsUpdate=true;
-      paintRing(g2.userData.ccwCtx,512,512,ccwCSS); g2.userData.ccwTex.needsUpdate=true;
+      paintRing(g2.userData.cwCtx,1024,1024,cwCSS); g2.userData.cwTex.needsUpdate=true;
+      paintRing(g2.userData.ccwCtx,1024,1024,ccwCSS); g2.userData.ccwTex.needsUpdate=true;
     });
   }
   // source globe

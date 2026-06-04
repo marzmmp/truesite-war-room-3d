@@ -1877,7 +1877,7 @@ MEMBERS.forEach((m,i)=>{
   const rad=(m.angle-90)*Math.PI/180;
   const sx=Math.cos(rad)*5.85, sz=Math.sin(rad)*5.85;
   const grp=new THREE.Group();
-  grp.position.set(sx,TABLE_Y,sz);
+  grp.position.set(sx,FY,sz);
   grp.rotation.y=rad+Math.PI;
   grp.userData={member:m, ph:i*0.72};
   // -- BURNT OAK PILLAR SEAT - matches table set --------------------------------
@@ -1893,29 +1893,29 @@ MEMBERS.forEach((m,i)=>{
 
   // -- MAIN PILLAR BODY - single turned column, tapered ---------------------
   const pillarMain = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.22, 1.10, 64),
+    new THREE.CylinderGeometry(0.18, 0.22, 1.32, 64),
     BURNT_OAK.clone()
   );
-  pillarMain.position.set(0, 0.15, 0); pillarMain.castShadow=true; grp.add(pillarMain);
+  pillarMain.position.set(0, 0.76, 0); pillarMain.castShadow=true; grp.add(pillarMain);
 
   // -- TURNED RING DETAILS - spaced along pillar shaft ----------------------
-  [-0.25, 0.05, 0.30, 0.52].forEach(ry=>{
+  [0.28, 0.55, 0.82, 1.08].forEach(ry=>{
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.215, 0.022, 12, 40),
       BURNT_MID.clone()
     );
     ring.rotation.x = Math.PI/2;
-    ring.position.set(0, 0.15 + ry, 0); grp.add(ring);
+    ring.position.set(0, ry, 0); grp.add(ring);
   });
 
   // -- GOLD TRIM BANDS - top, middle, bottom --------------------------------
-  [0.68, 0.15, -0.38].forEach(gy=>{
+  [1.28, 0.76, 0.22].forEach(gy=>{
     const band = new THREE.Mesh(
       new THREE.TorusGeometry(0.205, 0.014, 10, 40),
       RGOLD.clone()
     );
     band.rotation.x = Math.PI/2;
-    band.position.set(0, 0.15 + gy, 0); grp.add(band);
+    band.position.set(0, gy, 0); grp.add(band);
   });
 
   // -- CAPITAL (top cap) - wide flat disc, gold trim -------------------------
@@ -1923,35 +1923,35 @@ MEMBERS.forEach((m,i)=>{
     new THREE.CylinderGeometry(0.28, 0.20, 0.06, 64),
     BURNT_OAK.clone()
   );
-  capital.position.set(0, 0.73, 0); grp.add(capital);
+  capital.position.set(0, 1.45, 0); grp.add(capital);
 
   const capitalRim = new THREE.Mesh(
     new THREE.TorusGeometry(0.28, 0.016, 10, 40),
     RGOLD.clone()
   );
   capitalRim.rotation.x = Math.PI/2;
-  capitalRim.position.set(0, 0.762, 0); grp.add(capitalRim);
+  capitalRim.position.set(0, 1.482, 0); grp.add(capitalRim);
 
   // -- BASE (plinth) - wide footing, gold trim -------------------------------
   const base = new THREE.Mesh(
     new THREE.CylinderGeometry(0.26, 0.28, 0.07, 64),
     BURNT_OAK.clone()
   );
-  base.position.set(0, -0.395, 0); grp.add(base);
+  base.position.set(0, 0.08, 0); grp.add(base);
 
   const baseRim = new THREE.Mesh(
     new THREE.TorusGeometry(0.275, 0.016, 10, 40),
     RGOLD.clone()
   );
   baseRim.rotation.x = Math.PI/2;
-  baseRim.position.set(0, -0.362, 0); grp.add(baseRim);
+  baseRim.position.set(0, 0.112, 0); grp.add(baseRim);
 
   // Bottom foot plate - flat disc on floor
   const footPlate = new THREE.Mesh(
     new THREE.CylinderGeometry(0.30, 0.30, 0.025, 32),
     BURNT_MID.clone()
   );
-  footPlate.position.set(0, -0.443, 0); grp.add(footPlate);
+  footPlate.position.set(0, 0.013, 0); grp.add(footPlate);
   // globe
   const isPhi=m.isMarz||m.color==='orig';
   const gc1=mkCanvas(1024,1024), gc2=mkCanvas(1024,1024);
@@ -1999,7 +1999,7 @@ MEMBERS.forEach((m,i)=>{
   spr.scale.set(1.55,0.465,1); spr.position.set(0,2.70,-0.08);
   grp.userData.sprite=spr; grp.add(spr);
   // hit box
-  const hit=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,2.5,12),new THREE.MeshBasicMaterial({visible:false}));
+  const hit=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,1.6,12),new THREE.MeshBasicMaterial({visible:false}));
   hit.position.set(0,1.25,-0.08); hit.userData={member:m}; grp.add(hit); grp.userData.hit=hit;
   scene.add(grp); seats.push(grp);
 });
@@ -2071,7 +2071,7 @@ renderer.setAnimationLoop(()=>{
     if(globe){animGlobe(globe,t); globe.position.y=1.72+bob;}
     const pulse=s.userData.pulse;
     if(pulse){const sc=1+0.18*Math.sin(t*1.9+ph);pulse.scale.setScalar(sc);pulse.material.opacity=0.28+0.38*Math.sin(t*1.9+ph);}
-    if(s.userData.sprite)s.userData.sprite.position.y=2.52+bob;
+    if(s.userData.sprite)s.userData.sprite.position.y=1.80+bob;
     if(s.userData.crown){s.userData.crown.rotation.z=t*0.5;s.userData.crown.position.y=2.1+bob;}
   });
   // hover tooltip

@@ -64,7 +64,6 @@ function mkTex(w,h,draw){const c=mkCanvas(w,h);draw(c.getContext('2d'),w,h);cons
 function paintRing(ctx,w,h,css,fontScale=1.0){
   ctx.clearRect(0,0,w,h);
   const cx=w/2, cy=h/2;
-  // Scale font proportionally — base 18px at 512px for crisp high-res rendering
   const scale=w/512;
   const fs=Math.round(18*scale*fontScale), cw=fs*0.60;
   const r=Math.min(w,h)*0.42;
@@ -73,30 +72,29 @@ function paintRing(ctx,w,h,css,fontScale=1.0){
   ctx.textAlign='center'; ctx.textBaseline='middle';
 
   const alpha=parseFloat((css.match(/[\d.]+\)$/)||['1)'])[0]);
-
-  // Pass 1: subtle outer glow only (very low blur, no core contamination)
-  ctx.shadowColor=css;
-  ctx.shadowBlur=fs*0.6*scale;
-  ctx.fillStyle=css.replace(/[\d.]+\)$/, (alpha*0.25).toFixed(3)+')');
+  // NO shadowBlur — fake glow with 4 offset draws (10x cheaper than canvas blur)
+  const glowCSS=css.replace(/[\d.]+\)$/, (alpha*0.18).toFixed(3)+')');
+  ctx.fillStyle=glowCSS;
+  // Pass 1: glow halo — draw text at 4 cardinal offsets (cheap fake blur)
+  const gOff=fs*0.28*scale;
+  const offsets=[[gOff,0],[-gOff,0],[0,gOff],[0,-gOff]];
   for(let i=0;i<total;i++){
     const a=(i/total)*Math.PI*2;
-    ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
-    ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
+    const tx=cx+Math.cos(a)*r, ty=cy+Math.sin(a)*r;
+    ctx.save(); ctx.translate(tx,ty); ctx.rotate(a+Math.PI/2);
+    for(const [ox,oy] of offsets) ctx.fillText(String(SACRED[i%10]),ox,oy);
+    ctx.restore();
   }
-
-  // Pass 2: crisp sharp fill — zero shadowBlur, full alpha
-  ctx.shadowBlur=0;
+  // Pass 2: crisp sharp fill — full alpha, zero blur
   ctx.fillStyle=css;
   for(let i=0;i<total;i++){
     const a=(i/total)*Math.PI*2;
     ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
     ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
   }
-
-  // Pass 3: thin stroke outline for razor edge definition
+  // Pass 3: stroke outline (razor edge)
   ctx.strokeStyle='rgba(255,255,255,0.55)';
-  ctx.lineWidth=Math.max(1, scale*0.9);
-  ctx.shadowBlur=0;
+  ctx.lineWidth=Math.max(1,scale*0.9);
   for(let i=0;i<total;i++){
     const a=(i/total)*Math.PI*2;
     ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
@@ -115,18 +113,16 @@ function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
   const PHI_SQ=Math.PI*(3-Math.sqrt(5));
   const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*petalScale, 2*Math.sin(0.4)*petalScale);
 
-  // Shared materials — 1 CW, 1 CCW (not N unique materials)
-  const matCW = new THREE.MeshStandardMaterial({
-    map:cwTex, emissiveMap:cwTex, emissive:new THREE.Color(1,1,1),
-    emissiveIntensity:0.02, transparent:true, opacity:0.28,
+  // MeshBasicMaterial — zero PBR/lighting cost. AdditiveBlending glow is identical visually.
+  const matCW = new THREE.MeshBasicMaterial({
+    map:cwTex, transparent:true, opacity:0.28,
     blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
-    roughness:0.0, metalness:0.0, toneMapped:false
+    toneMapped:false
   });
-  const matCCW = new THREE.MeshStandardMaterial({
-    map:ccwTex, emissiveMap:ccwTex, emissive:new THREE.Color(1,1,1),
-    emissiveIntensity:0.02, transparent:true, opacity:0.28,
+  const matCCW = new THREE.MeshBasicMaterial({
+    map:ccwTex, transparent:true, opacity:0.28,
     blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
-    roughness:0.0, metalness:0.0, toneMapped:false
+    toneMapped:false
   });
 
   // Split petals into CW and CCW arrays
@@ -168,26 +164,33 @@ function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
   return group;
 }
 
+// Pre-allocated Matrix4 scratch — zero GC in animGlobe
+const _iMat4 = new THREE.Matrix4();
+const _iPos  = new THREE.Vector3();
 function animGlobe(group, t){
   const{imCW,imCCW,cwData,ccwData}=group.userData;
-  const _d=_iDummy;
-  cwData.forEach((e,i)=>{
+  for(let i=0;i<cwData.length;i++){
+    const e=cwData[i];
     _iAx.copy(e.pole);
     _iQs.setFromAxisAngle(_iAx, t*e.spd);
-    _d.position.copy(e.pole).multiplyScalar(0.01);
-    _d.quaternion.copy(_iQb.copy(e.baseQ).premultiply(_iQs));
-    _d.scale.setScalar(1); _d.updateMatrix();
-    imCW.setMatrixAt(i, _d.matrix);
-  });
+    _iQb.copy(e.baseQ).premultiply(_iQs);
+    // Build matrix directly: rotation from quat, then set translation
+    _iMat4.makeRotationFromQuaternion(_iQb);
+    _iPos.copy(e.pole).multiplyScalar(0.01);
+    _iMat4.setPosition(_iPos);
+    imCW.setMatrixAt(i, _iMat4);
+  }
   imCW.instanceMatrix.needsUpdate = true;
-  ccwData.forEach((e,i)=>{
+  for(let i=0;i<ccwData.length;i++){
+    const e=ccwData[i];
     _iAx.copy(e.pole);
     _iQs.setFromAxisAngle(_iAx, -t*e.spd);
-    _d.position.copy(e.pole).multiplyScalar(0.01);
-    _d.quaternion.copy(_iQb.copy(e.baseQ).premultiply(_iQs));
-    _d.scale.setScalar(1); _d.updateMatrix();
-    imCCW.setMatrixAt(i, _d.matrix);
-  });
+    _iQb.copy(e.baseQ).premultiply(_iQs);
+    _iMat4.makeRotationFromQuaternion(_iQb);
+    _iPos.copy(e.pole).multiplyScalar(0.01);
+    _iMat4.setPosition(_iPos);
+    imCCW.setMatrixAt(i, _iMat4);
+  }
   imCCW.instanceMatrix.needsUpdate = true;
 }
 
@@ -195,8 +198,7 @@ function animGlobe(group, t){
 const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type = THREE.BasicShadowMap;
+renderer.shadowMap.enabled=false; // No meaningful shadows in this scene — saves GPU
 renderer.physicallyCorrectLights = true;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=0.78;
@@ -2113,7 +2115,8 @@ renderer.setAnimationLoop(()=>{
   animGlobe(sourceGlobe,t);
   // seats
   const _doSeatAnim=(Math.round(t*60)%2===0); // animate seats every other frame
-  seats.forEach(s=>{
+  for(let _si=0;_si<seats.length;_si++){
+    const s=seats[_si];
     const ph=s.userData.ph, bob=0.05*Math.sin(t*1.15+ph);
     const globe=s.userData.globe;
     if(globe){if(_doSeatAnim)animGlobe(globe,t); globe.position.y=1.78+bob;}
@@ -2121,7 +2124,7 @@ renderer.setAnimationLoop(()=>{
     if(pulse){const sc=1+0.18*Math.sin(t*1.9+ph);pulse.scale.setScalar(sc);pulse.material.opacity=0.28+0.38*Math.sin(t*1.9+ph);}
     if(s.userData.sprite)s.userData.sprite.position.y=2.55+bob;
     if(s.userData.crown){s.userData.crown.rotation.z=t*0.5;s.userData.crown.position.y=2.20+bob;}
-  });
+  }
   // hover tooltip
   ray.setFromCamera(mouse,camera);
   const hits=ray.intersectObjects(_hitTargets);

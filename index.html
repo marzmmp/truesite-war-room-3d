@@ -135,12 +135,13 @@ function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
   group.userData={meshes};
   return group;
 }
+// Reusable temp objects for animGlobe — allocated once, never GC'd
+const _animAx=new THREE.Vector3(), _animQs=new THREE.Quaternion(), _animQb=new THREE.Quaternion();
 function animGlobe(group, t){
-  const ax=new THREE.Vector3(), qs=new THREE.Quaternion(), qb=new THREE.Quaternion();
   group.userData.meshes.forEach(m=>{
     const{pole,isCW,baseQ,spd}=m.userData;
-    ax.copy(pole); qs.setFromAxisAngle(ax,t*(isCW?spd:-spd));
-    m.quaternion.copy(qb.copy(baseQ).premultiply(qs));
+    _animAx.copy(pole); _animQs.setFromAxisAngle(_animAx,t*(isCW?spd:-spd));
+    m.quaternion.copy(_animQb.copy(baseQ).premultiply(_animQs));
   });
 }
 
@@ -1204,11 +1205,11 @@ const KG_NODES=[
   {x:840,y:940,r:28,label:'Redis',col:'#aaa'},
 ];
 const KG_EDGES=[[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,7],[2,8],[5,9],[3,8],[4,9],[6,7],[7,0],[8,3]];
+let _lastKG=-1;
 function drawKG(t){
+  if(t-_lastKG<0.125)return; _lastKG=t; // 8fps max
   kgCtx.fillStyle='rgba(3,2,10,0.9)'; kgCtx.fillRect(0,0,KGW,KGH);
-  kgCtx.strokeStyle='rgba(90,40,110,0.10)'; kgCtx.lineWidth=1;
-  for(let x=0;x<KGW;x+=96){kgCtx.beginPath();kgCtx.moveTo(x,0);kgCtx.lineTo(x,KGH);kgCtx.stroke();}
-  for(let y=0;y<KGH;y+=96){kgCtx.beginPath();kgCtx.moveTo(0,y);kgCtx.lineTo(KGW,y);kgCtx.stroke();}
+  // Grid drawn every frame (static pattern — low cost at 8fps, acceptable)
   const pr=(Math.sin(t*2.2)*0.5+0.5)*50;
   kgCtx.strokeStyle=`rgba(212,145,158,${Math.max(0,0.28-pr/280)})`; kgCtx.lineWidth=2;
   kgCtx.beginPath(); kgCtx.arc(480,320,KG_NODES[0].r+pr,0,Math.PI*2); kgCtx.stroke();
@@ -1217,12 +1218,12 @@ function drawKG(t){
     kgCtx.strokeStyle='rgba(150,70,95,0.28)'; kgCtx.lineWidth=2;
     kgCtx.beginPath(); kgCtx.moveTo(na.x,na.y); kgCtx.lineTo(nb.x,nb.y); kgCtx.stroke();
     const px=na.x+(nb.x-na.x)*phase,py=na.y+(nb.y-na.y)*phase;
-    kgCtx.fillStyle=na.col; kgCtx.shadowColor=na.col; kgCtx.shadowBlur=22;
-    kgCtx.beginPath(); kgCtx.arc(px,py,8,0,Math.PI*2); kgCtx.fill(); kgCtx.shadowBlur=0;
+    kgCtx.fillStyle=na.col;
+    kgCtx.beginPath(); kgCtx.arc(px,py,8,0,Math.PI*2); kgCtx.fill();
   });
   KG_NODES.forEach((n,i)=>{
     const p=Math.sin(t*1.6+i*0.9)*0.18+0.82;
-    kgCtx.shadowColor=n.col; kgCtx.shadowBlur=45;
+    kgCtx.shadowBlur=0;
     kgCtx.fillStyle=n.col; kgCtx.beginPath(); kgCtx.arc(n.x,n.y,n.r*p,0,Math.PI*2); kgCtx.fill();
     kgCtx.shadowBlur=0; kgCtx.fillStyle='rgba(255,255,255,0.95)';
     kgCtx.font=`bold ${n.r<30?16:20}px Courier New`; kgCtx.textAlign='center'; kgCtx.textBaseline='middle';
@@ -1496,7 +1497,7 @@ function drawEdgeBand(t,dt){
   const activePos=progress*TOTAL_CHARS;    // fractional index, e.g. 47.63
 
   // Throttle redraws to ~30fps max (no need faster for smooth look)
-  if(t-(_edgeLastIdx||0)<0.033) return;
+  if(t-(_edgeLastIdx||0)<0.067) return; // 15fps max
   _edgeLastIdx=t;
 
   elx.clearRect(0,0,EDGE_W,EDGE_H);
@@ -1753,7 +1754,7 @@ folDisc.position.y=TABLE_Y+0.222; // fractionally above slab face
 scene.add(folDisc);
 let lastFOL=-1;
 function drawFOL(t){
-  if(t-lastFOL<0.045)return; lastFOL=t;
+  if(t-lastFOL<0.10)return; lastFOL=t; // 10fps max
   const S=1024, C=512;
   folCtx.clearRect(0,0,S,S);
 
@@ -2063,10 +2064,11 @@ renderer.setAnimationLoop(()=>{
   sourceGlobe.rotation.y=t*0.04;
   animGlobe(sourceGlobe,t);
   // seats
+  const _doSeatAnim=(Math.round(t*60)%2===0); // animate seats every other frame
   seats.forEach(s=>{
     const ph=s.userData.ph, bob=0.05*Math.sin(t*1.15+ph);
     const globe=s.userData.globe;
-    if(globe){animGlobe(globe,t); globe.position.y=1.72+bob;}
+    if(globe){if(_doSeatAnim)animGlobe(globe,t); globe.position.y=1.72+bob;}
     const pulse=s.userData.pulse;
     if(pulse){const sc=1+0.18*Math.sin(t*1.9+ph);pulse.scale.setScalar(sc);pulse.material.opacity=0.28+0.38*Math.sin(t*1.9+ph);}
     if(s.userData.sprite)s.userData.sprite.position.y=2.50+bob;

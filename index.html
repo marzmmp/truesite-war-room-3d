@@ -1856,7 +1856,7 @@ const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
 srcTexCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16; srcTexCW.generateMipmaps=true;
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
 srcTexCCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16; srcTexCCW.generateMipmaps=true;
-const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,800,0.52);
+const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,800,1.08);
 sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,0.06,10); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 

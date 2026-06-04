@@ -61,12 +61,12 @@ function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.heig
 function mkTex(w,h,draw){const c=mkCanvas(w,h);draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;return t;}
 
 // --- SACRED CIRCLE PAINTER ----------------------------------------------------
-function paintRing(ctx,w,h,css){
+function paintRing(ctx,w,h,css,fontScale=1.0){
   ctx.clearRect(0,0,w,h);
   const cx=w/2, cy=h/2;
   // Scale font proportionally — base 18px at 512px for crisp high-res rendering
   const scale=w/512;
-  const fs=Math.round(18*scale), cw=fs*0.60;
+  const fs=Math.round(18*scale*fontScale), cw=fs*0.60;
   const r=Math.min(w,h)*0.42;
   const total=Math.floor((2*Math.PI*r)/cw);
   ctx.font=`900 ${fs}px "Courier New", monospace`;
@@ -105,11 +105,11 @@ function paintRing(ctx,w,h,css){
 }
 
 // --- GLOBE BUILDER ------------------------------------------------------------
-function makeGlobe(scale, cwTex, ccwTex){
+function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
   const group = new THREE.Group();
-  const N=240, PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
-  // Slightly larger petals fill the sphere surface more densely
-  const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*1.08, 2*Math.sin(0.4)*1.08);
+  const PHI_SQ=Math.PI*(3-Math.sqrt(5)), meshes=[];
+  // Petal size scales inversely with density so surface coverage stays consistent
+  const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*petalScale, 2*Math.sin(0.4)*petalScale);
   for(let i=0;i<N;i++){
     const y=1-(i/(N-1))*2, r2=Math.sqrt(Math.max(0,1-y*y)), theta=PHI_SQ*i;
     const pole=new THREE.Vector3(r2*Math.cos(theta),y,r2*Math.sin(theta)).normalize();
@@ -1850,13 +1850,13 @@ tableLight.position.set(0,2.8,0); scene.add(tableLight);
 // --- SOURCE GLOBE - center hover ---------------------------------------------
 const srcCWCanvas=mkCanvas(4096,4096); const srcCCWCanvas=mkCanvas(4096,4096);
 const srcCWCtx=srcCWCanvas.getContext('2d'); const srcCCWCtx=srcCCWCanvas.getContext('2d');
-paintRing(srcCWCtx,4096,4096,'rgba(255,195,120,0.95)');
-paintRing(srcCCWCtx,4096,4096,'rgba(210,160,100,0.82)');
+paintRing(srcCWCtx,4096,4096,'rgba(255,195,120,0.95)',0.38);
+paintRing(srcCCWCtx,4096,4096,'rgba(210,160,100,0.82)',0.38);
 const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
 srcTexCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16; srcTexCW.generateMipmaps=true;
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
 srcTexCCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16; srcTexCCW.generateMipmaps=true;
-const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW);
+const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,800,0.52);
 sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,0.06,10); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 
@@ -2049,8 +2049,8 @@ renderer.setAnimationLoop(()=>{
     const{r,g,b}=getColor(t); const d=1/PHI;
     const cwCSS=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.95)`;
     const ccwCSS=`rgba(${Math.round(r*d)},${Math.round(g*d)},${Math.round(b*d)},0.82)`;
-    paintRing(srcCWCtx,4096,4096,cwCSS); srcTexCW.needsUpdate=true;
-    paintRing(srcCCWCtx,4096,4096,ccwCSS); srcTexCCW.needsUpdate=true;
+    paintRing(srcCWCtx,4096,4096,cwCSS,0.38); srcTexCW.needsUpdate=true;
+    paintRing(srcCCWCtx,4096,4096,ccwCSS,0.38); srcTexCCW.needsUpdate=true;
     srcLight.color.setRGB(r/255,g/255,b/255);
     // update phi-cycle sibling globes
     seats.forEach(s=>{

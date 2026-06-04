@@ -64,36 +64,44 @@ function mkTex(w,h,draw){const c=mkCanvas(w,h);draw(c.getContext('2d'),w,h);cons
 function paintRing(ctx,w,h,css){
   ctx.clearRect(0,0,w,h);
   const cx=w/2, cy=h/2;
-  // Scale font proportionally to canvas size (base was 11px at 512px)
+  // Scale font proportionally — base 18px at 512px for crisp high-res rendering
   const scale=w/512;
-  const fs=Math.round(11*scale), cw=fs*0.62;
+  const fs=Math.round(18*scale), cw=fs*0.60;
   const r=Math.min(w,h)*0.42;
   const total=Math.floor((2*Math.PI*r)/cw);
-  ctx.font=`bold ${fs}px Courier New`;
+  ctx.font=`900 ${fs}px "Courier New", monospace`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
 
-  // Multi-pass for crisp glow — outer glow, then sharp core
-  const cssBase=css.replace(/[\d.]+\)$/,'');
   const alpha=parseFloat((css.match(/[\d.]+\)$/)||['1)'])[0]);
 
-  // Glow pass
+  // Pass 1: subtle outer glow only (very low blur, no core contamination)
   ctx.shadowColor=css;
-  ctx.shadowBlur=fs*1.4*scale;
-  ctx.fillStyle=css.replace(/[\d.]+\)$/, (alpha*0.35).toFixed(3)+')');
+  ctx.shadowBlur=fs*0.6*scale;
+  ctx.fillStyle=css.replace(/[\d.]+\)$/, (alpha*0.25).toFixed(3)+')');
   for(let i=0;i<total;i++){
     const a=(i/total)*Math.PI*2;
     ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
     ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
   }
-  // Sharp core pass
-  ctx.shadowBlur=fs*0.5*scale;
+
+  // Pass 2: crisp sharp fill — zero shadowBlur, full alpha
+  ctx.shadowBlur=0;
   ctx.fillStyle=css;
   for(let i=0;i<total;i++){
     const a=(i/total)*Math.PI*2;
     ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
     ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
   }
+
+  // Pass 3: thin stroke outline for razor edge definition
+  ctx.strokeStyle='rgba(255,255,255,0.55)';
+  ctx.lineWidth=Math.max(1, scale*0.9);
   ctx.shadowBlur=0;
+  for(let i=0;i<total;i++){
+    const a=(i/total)*Math.PI*2;
+    ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
+    ctx.strokeText(String(SACRED[i%10]),0,0);ctx.restore();
+  }
 }
 
 // --- GLOBE BUILDER ------------------------------------------------------------
@@ -1840,14 +1848,14 @@ function drawFOL(t){
 const tableLight=new THREE.PointLight(0xfff4e8,3.8,16);
 tableLight.position.set(0,2.8,0); scene.add(tableLight);
 // --- SOURCE GLOBE - center hover ---------------------------------------------
-const srcCWCanvas=mkCanvas(1024,1024); const srcCCWCanvas=mkCanvas(1024,1024);
+const srcCWCanvas=mkCanvas(4096,4096); const srcCCWCanvas=mkCanvas(4096,4096);
 const srcCWCtx=srcCWCanvas.getContext('2d'); const srcCCWCtx=srcCCWCanvas.getContext('2d');
-paintRing(srcCWCtx,1024,1024,'rgba(255,195,120,0.95)');
-paintRing(srcCCWCtx,1024,1024,'rgba(210,160,100,0.82)');
+paintRing(srcCWCtx,4096,4096,'rgba(255,195,120,0.95)');
+paintRing(srcCCWCtx,4096,4096,'rgba(210,160,100,0.82)');
 const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
-srcTexCW.minFilter=THREE.LinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16;
+srcTexCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16; srcTexCW.generateMipmaps=true;
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
-srcTexCCW.minFilter=THREE.LinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16;
+srcTexCCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16; srcTexCCW.generateMipmaps=true;
 const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW);
 sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,0.06,10); srcLight.position.set(0,3.6,0); scene.add(srcLight);
@@ -2041,8 +2049,8 @@ renderer.setAnimationLoop(()=>{
     const{r,g,b}=getColor(t); const d=1/PHI;
     const cwCSS=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.95)`;
     const ccwCSS=`rgba(${Math.round(r*d)},${Math.round(g*d)},${Math.round(b*d)},0.82)`;
-    paintRing(srcCWCtx,1024,1024,cwCSS); srcTexCW.needsUpdate=true;
-    paintRing(srcCCWCtx,1024,1024,ccwCSS); srcTexCCW.needsUpdate=true;
+    paintRing(srcCWCtx,4096,4096,cwCSS); srcTexCW.needsUpdate=true;
+    paintRing(srcCCWCtx,4096,4096,ccwCSS); srcTexCCW.needsUpdate=true;
     srcLight.color.setRGB(r/255,g/255,b/255);
     // update phi-cycle sibling globes
     seats.forEach(s=>{

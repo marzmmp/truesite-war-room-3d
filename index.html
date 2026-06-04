@@ -2017,20 +2017,20 @@ MEMBERS.forEach((m,i)=>{
   const gt2=new THREE.CanvasTexture(gc2); gt2.minFilter=THREE.LinearFilter; gt2.magFilter=THREE.LinearFilter; gt2.anisotropy=16;
   const gs=m.isMarz?0.60:0.48;
   const globe=makeGlobe(gs,gt1,gt2);
-  globe.position.set(0,1.78,-0.08);
+  globe.position.set(0,2.90,-0.08);
   globe.userData.isPhi=isPhi; globe.userData.cwCtx=gx1; globe.userData.ccwCtx=gx2; globe.userData.cwTex=gt1; globe.userData.ccwTex=gt2;
   grp.userData.globe=globe; grp.add(globe);
   // pulse ring
   const pCol=m.isMarz?0xFFD700:(m.color==='orig'?0xc8960c:parseInt((m.color||'#c8960c').slice(1),16));
   if(m.online){
     const pulse=new THREE.Mesh(new THREE.TorusGeometry(gs+0.1,0.02,10,48),new THREE.MeshBasicMaterial({color:pCol,transparent:true,opacity:0.65}));
-    pulse.rotation.x=Math.PI/2; pulse.position.set(0,1.58,-0.08);
+    pulse.rotation.x=Math.PI/2; pulse.position.set(0,2.70,-0.08);
     grp.userData.pulse=pulse; grp.add(pulse);
   }
   // crown (Marz)
   if(m.isMarz){
     const crown=new THREE.Mesh(new THREE.TorusGeometry(0.34,0.038,10,40),new THREE.MeshStandardMaterial({color:0xFFD700,roughness:0.08,metalness:1.0,emissive:0x886600,emissiveIntensity:1.1}));
-    crown.rotation.x=Math.PI/2; crown.position.set(0,3.20,-0.08);
+    crown.rotation.x=Math.PI/2; crown.position.set(0,4.32,-0.08);
     grp.userData.crown=crown; grp.add(crown);
   }
   // label sprite
@@ -2043,7 +2043,7 @@ MEMBERS.forEach((m,i)=>{
   lx.fillStyle=m.online?'#22c55e':'#444'; lx.beginPath(); lx.arc(136,68,5,0,Math.PI*2); lx.fill();
   lx.fillStyle=m.online?'#22c55e':'#555'; lx.font='bold 11px Arial'; lx.textAlign='left'; lx.fillText(m.online?'ONLINE':'OFFLINE',148,72);
   const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(lc),transparent:true}));
-  spr.scale.set(1.55,0.465,1); spr.position.set(0,2.55,-0.08);
+  spr.scale.set(1.55,0.465,1); spr.position.set(0,3.67,-0.08);
   grp.userData.sprite=spr; grp.add(spr);
   // hit box
   const hit=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,1.6,12),new THREE.MeshBasicMaterial({visible:false}));
@@ -2119,11 +2119,11 @@ renderer.setAnimationLoop(()=>{
     const s=seats[_si];
     const ph=s.userData.ph, bob=0.05*Math.sin(t*1.15+ph);
     const globe=s.userData.globe;
-    if(globe){if(_doSeatAnim)animGlobe(globe,t); globe.position.y=1.78+bob;}
+    if(globe){if(_doSeatAnim)animGlobe(globe,t); globe.position.y=2.90+bob;}
     const pulse=s.userData.pulse;
     if(pulse){const sc=1+0.18*Math.sin(t*1.9+ph);pulse.scale.setScalar(sc);pulse.material.opacity=0.28+0.38*Math.sin(t*1.9+ph);}
-    if(s.userData.sprite)s.userData.sprite.position.y=2.55+bob;
-    if(s.userData.crown){s.userData.crown.rotation.z=t*0.5;s.userData.crown.position.y=2.20+bob;}
+    if(s.userData.sprite)s.userData.sprite.position.y=3.67+bob;
+    if(s.userData.crown){s.userData.crown.rotation.z=t*0.5;s.userData.crown.position.y=4.32+bob;}
   }
   // hover tooltip
   ray.setFromCamera(mouse,camera);

@@ -470,11 +470,8 @@ const ceilFill=new THREE.PointLight(0xffd090,3.2,35); ceilFill.position.set(0,CY
 function makeLogoTex(){
   return mkTex(3200,640,(ctx,W,H)=>{
     ctx.clearRect(0,0,W,H);
+    // Fully transparent background — letters float on the wall
     const cx=W/2;
-
-    // -- Background - deep noir with subtle warm vignette ----------------------
-    // Solid dark noir base — so logo reads cleanly on back wall
-    // transparent — no background fill
 
     // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
     const iconX=cx-1100, iconY=H*0.50, iconR=200;
@@ -600,122 +597,123 @@ function makeLogoTex(){
     // Window - right
     ctx.beginPath(); ctx.rect(hx+20*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
 
-    // -- TRUESITE text - floating letters, border glow, no background ----------
+    // -- TRUESITE text - BLACK letters with RGB border glow -------------------
     const FONT_SIZE = 360;
     const tx=cx-920, ty=H*0.60;
     ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
 
-    // Border glow — thick stroke with color shadow bleeding outward
-    // Pass 1: outer wide color bloom
+    // Pass 1: outermost wide color bloom — red channel
     ctx.save();
-    ctx.shadowColor='rgba(212,145,100,1)';
-    ctx.shadowBlur=40;
-    ctx.strokeStyle='rgba(232,168,100,0.55)';
-    ctx.lineWidth=28;
+    ctx.shadowColor='rgba(255,0,80,1)';
+    ctx.shadowBlur=80;
+    ctx.strokeStyle='rgba(255,0,80,0.0)'; // shadow only, invisible stroke
+    ctx.lineWidth=1;
     ctx.lineJoin='round';
     ctx.strokeText('TRUESITE',tx,ty);
     ctx.restore();
 
-    // Pass 2: tighter bright glow ring
+    // Pass 2: green channel bloom
     ctx.save();
-    ctx.shadowColor='rgba(255,220,160,1)';
-    ctx.shadowBlur=28;
-    ctx.strokeStyle='rgba(255,215,140,0.88)';
-    ctx.lineWidth=8;
+    ctx.shadowColor='rgba(0,255,120,1)';
+    ctx.shadowBlur=60;
+    ctx.strokeStyle='rgba(0,255,120,0.0)';
+    ctx.lineWidth=1;
     ctx.lineJoin='round';
     ctx.strokeText('TRUESITE',tx,ty);
     ctx.restore();
 
-    // Pass 3: main metallic fill on top of the glow
-    const tg=ctx.createLinearGradient(tx,ty-FONT_SIZE*1.05,tx,ty+FONT_SIZE*0.12);
-    tg.addColorStop(0,   '#c07840');
-    tg.addColorStop(0.20,'#eaaa70');
-    tg.addColorStop(0.40,'#d4919e');
-    tg.addColorStop(0.55,'#ecb888');
-    tg.addColorStop(0.80,'#c06838');
-    tg.addColorStop(1,   '#9a4a38');
+    // Pass 3: blue channel bloom
+    ctx.save();
+    ctx.shadowColor='rgba(80,100,255,1)';
+    ctx.shadowBlur=50;
+    ctx.strokeStyle='rgba(80,100,255,0.0)';
+    ctx.lineWidth=1;
+    ctx.lineJoin='round';
+    ctx.strokeText('TRUESITE',tx,ty);
+    ctx.restore();
+
+    // Pass 4: bright white tight border glow around each letter edge
+    ctx.save();
+    ctx.shadowColor='rgba(255,255,255,1)';
+    ctx.shadowBlur=18;
+    ctx.strokeStyle='rgba(255,255,255,0.95)';
+    ctx.lineWidth=4;
+    ctx.lineJoin='round';
+    ctx.strokeText('TRUESITE',tx,ty);
+    ctx.restore();
+
+    // Pass 5: outer colored border stroke — rose-gold ring
+    ctx.save();
+    ctx.shadowColor='rgba(212,145,158,1)';
+    ctx.shadowBlur=24;
+    ctx.strokeStyle='rgba(232,160,170,0.80)';
+    ctx.lineWidth=10;
+    ctx.lineJoin='round';
+    ctx.strokeText('TRUESITE',tx,ty);
+    ctx.restore();
+
+    // Pass 6: pure BLACK fill on top — letters are black, only the border glows
     ctx.shadowBlur=0;
-    ctx.fillStyle=tg;
+    ctx.fillStyle='#000000';
     ctx.fillText('TRUESITE',tx,ty);
 
-    // Pass 4: inner specular edge
-    ctx.save();
-    ctx.shadowBlur=0;
-    ctx.strokeStyle='rgba(255,248,218,0.55)';
-    ctx.lineWidth=1.5;
-    ctx.strokeText('TRUESITE',tx,ty);
-    ctx.restore();
-
-    // -- TECHNOLOGIES subtext — floating glow letters -------------------------
+    // -- TECHNOLOGIES subtext — black letters + border glow -------------------
     const SUB_SIZE=148;
     const subx=cx-900, suby=ty+160;
     ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
 
-    // Outer glow
+    // RGB bloom passes
     ctx.save();
-    ctx.shadowColor='rgba(212,145,100,1)';
-    ctx.shadowBlur=25;
-    ctx.strokeStyle='rgba(232,168,100,0.45)';
-    ctx.lineWidth=14;
+    ctx.shadowColor='rgba(255,0,80,1)';
+    ctx.shadowBlur=50;
+    ctx.strokeStyle='rgba(255,0,80,0.0)';
+    ctx.lineWidth=1;
+    ctx.strokeText('TECHNOLOGIES',subx,suby);
+    ctx.restore();
+
+    ctx.save();
+    ctx.shadowColor='rgba(0,255,120,1)';
+    ctx.shadowBlur=38;
+    ctx.strokeStyle='rgba(0,255,120,0.0)';
+    ctx.lineWidth=1;
+    ctx.strokeText('TECHNOLOGIES',subx,suby);
+    ctx.restore();
+
+    ctx.save();
+    ctx.shadowColor='rgba(80,100,255,1)';
+    ctx.shadowBlur=30;
+    ctx.strokeStyle='rgba(80,100,255,0.0)';
+    ctx.lineWidth=1;
+    ctx.strokeText('TECHNOLOGIES',subx,suby);
+    ctx.restore();
+
+    // White tight border
+    ctx.save();
+    ctx.shadowColor='rgba(255,255,255,1)';
+    ctx.shadowBlur=12;
+    ctx.strokeStyle='rgba(255,255,255,0.90)';
+    ctx.lineWidth=3;
     ctx.lineJoin='round';
     ctx.strokeText('TECHNOLOGIES',subx,suby);
     ctx.restore();
 
-    // Tight glow ring
+    // Rose-gold border
     ctx.save();
-    ctx.shadowColor='rgba(255,220,160,1)';
-    ctx.shadowBlur=18;
-    ctx.strokeStyle='rgba(255,215,140,0.80)';
-    ctx.lineWidth=4;
+    ctx.shadowColor='rgba(212,145,158,1)';
+    ctx.shadowBlur=16;
+    ctx.strokeStyle='rgba(232,160,170,0.72)';
+    ctx.lineWidth=6;
     ctx.lineJoin='round';
     ctx.strokeText('TECHNOLOGIES',subx,suby);
     ctx.restore();
 
-    // Fill
-    const sg=ctx.createLinearGradient(subx,suby-SUB_SIZE*1.0,subx,suby+SUB_SIZE*0.12);
-    sg.addColorStop(0,  '#b87040');
-    sg.addColorStop(0.35,'#d4919e');
-    sg.addColorStop(0.65,'#c07038');
-    sg.addColorStop(1,  '#9a4838');
+    // BLACK fill
     ctx.shadowBlur=0;
-    ctx.fillStyle=sg;
+    ctx.fillStyle='#000000';
     ctx.fillText('TECHNOLOGIES',subx,suby);
 
-    // -- UNDERGLOW - multi-layer premium backlight -----------------------------
-    // Deep radial halo
-    const ugHalo=ctx.createRadialGradient(cx,H*0.72,0,cx,H*0.72,W*0.55);
-    ugHalo.addColorStop(0,'rgba(210,130,85,0.32)');
-    ugHalo.addColorStop(0.28,'rgba(218,150,105,0.20)');
-    ugHalo.addColorStop(0.55,'rgba(195,112,128,0.11)');
-    ugHalo.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=ugHalo; ctx.fillRect(0,0,W,H);
-
-    // Wide warm bar behind text zone
-    const ugBar=ctx.createLinearGradient(cx-1600,0,cx+1600,0);
-    ugBar.addColorStop(0,   'rgba(180,95,60,0)');
-    ugBar.addColorStop(0.12,'rgba(205,122,72,0.28)');
-    ugBar.addColorStop(0.5, 'rgba(225,148,92,0.42)');
-    ugBar.addColorStop(0.88,'rgba(205,122,72,0.28)');
-    ugBar.addColorStop(1,   'rgba(180,95,60,0)');
-    ctx.fillStyle=ugBar; ctx.fillRect(cx-1600,H*0.14,3200,H*0.76);
-
-    // Warm amber underglow strip
-    const stripG=ctx.createLinearGradient(cx-1400,0,cx+1400,0);
-    stripG.addColorStop(0,  'rgba(220,152,100,0)');
-    stripG.addColorStop(0.18,'rgba(238,165,104,0.78)');
-    stripG.addColorStop(0.5, 'rgba(252,192,124,0.98)');
-    stripG.addColorStop(0.82,'rgba(238,165,104,0.78)');
-    stripG.addColorStop(1,  'rgba(220,152,100,0)');
-    ctx.fillStyle=stripG; ctx.fillRect(cx-1400,H*0.836,2800,42);
-
-    // Rose gold accent strip
-    const roseStrip=ctx.createLinearGradient(cx-1280,0,cx+1280,0);
-    roseStrip.addColorStop(0,   'rgba(215,148,162,0)');
-    roseStrip.addColorStop(0.22,'rgba(218,152,165,0.62)');
-    roseStrip.addColorStop(0.5, 'rgba(240,180,188,0.88)');
-    roseStrip.addColorStop(0.78,'rgba(218,152,165,0.62)');
-    roseStrip.addColorStop(1,   'rgba(215,148,162,0)');
-    ctx.fillStyle=roseStrip; ctx.fillRect(cx-1280,H*0.812,2560,22);
+    // -- UNDERGLOW - subtle glow only, no background panels -------------------
+    // Just a very faint halo so the letters don't look floating in dead space
 
     // LED strip - the hot white line itself
     const ledLine=ctx.createLinearGradient(cx-1160,0,cx+1160,0);
@@ -731,8 +729,8 @@ function makeLogoTex(){
 
 
 const logoPlane=new THREE.Mesh(
-  new THREE.PlaneGeometry(RW*0.80,RH*0.38),
-  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,alphaTest:0.005,depthWrite:false,premultipliedAlpha:false})
+  new THREE.PlaneGeometry(RW*0.90,RH*0.44),
+  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,alphaTest:0.01,depthWrite:false,premultipliedAlpha:false})
 );
 logoPlane.position.set(0,FY+RH*0.75,-RD/2+0.12); scene.add(logoPlane);
 const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.72,-RD/2+1.5); scene.add(logoGlow);

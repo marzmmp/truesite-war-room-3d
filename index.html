@@ -174,7 +174,7 @@ camera.position.set(0,4.5,13);
 // Post-processing
 const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),0.22,0.60,0.40));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),0.08,0.28,0.68));
 
 function onResize(){
   const W=window.innerWidth,H=window.innerHeight;

@@ -138,9 +138,7 @@ function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
 function animGlobe(group, t){
   const ax=new THREE.Vector3(), qs=new THREE.Quaternion(), qb=new THREE.Quaternion();
   group.userData.meshes.forEach(m=>{
-    const{pole,isCW,baseQ,spd,ph,sf}=m.userData;
-    m.material.opacity=0.22+0.08*(Math.sin(t*sf+ph)*0.5+0.5);
-    m.material.emissiveIntensity=0.01+0.02*(Math.sin(t*sf*1.3+ph)*0.5+0.5);
+    const{pole,isCW,baseQ,spd}=m.userData;
     ax.copy(pole); qs.setFromAxisAngle(ax,t*(isCW?spd:-spd));
     m.quaternion.copy(qb.copy(baseQ).premultiply(qs));
   });
@@ -148,10 +146,10 @@ function animGlobe(group, t){
 
 // --- SCENE SETUP --------------------------------------------------------------
 const canvas=document.getElementById('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance',logarithmicDepthBuffer:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,3));
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.BasicShadowMap;
 renderer.physicallyCorrectLights = true;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=0.90;
@@ -1848,15 +1846,15 @@ function drawFOL(t){
 const tableLight=new THREE.PointLight(0xfff4e8,3.8,16);
 tableLight.position.set(0,2.8,0); scene.add(tableLight);
 // --- SOURCE GLOBE - center hover ---------------------------------------------
-const srcCWCanvas=mkCanvas(4096,4096); const srcCCWCanvas=mkCanvas(4096,4096);
+const srcCWCanvas=mkCanvas(2048,2048); const srcCCWCanvas=mkCanvas(2048,2048);
 const srcCWCtx=srcCWCanvas.getContext('2d'); const srcCCWCtx=srcCCWCanvas.getContext('2d');
-paintRing(srcCWCtx,4096,4096,'rgba(255,195,120,0.95)',0.38);
-paintRing(srcCCWCtx,4096,4096,'rgba(210,160,100,0.82)',0.38);
+paintRing(srcCWCtx,2048,2048,'rgba(255,195,120,0.95)',0.38);
+paintRing(srcCCWCtx,2048,2048,'rgba(210,160,100,0.82)',0.38);
 const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
 srcTexCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16; srcTexCW.generateMipmaps=true;
 const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
 srcTexCCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16; srcTexCCW.generateMipmaps=true;
-const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,800,1.08);
+const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,400,1.08);
 sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
 const srcLight=new THREE.PointLight(0xffeedd,0.06,10); srcLight.position.set(0,3.6,0); scene.add(srcLight);
 
@@ -1896,7 +1894,7 @@ MEMBERS.forEach((m,i)=>{
     new THREE.CylinderGeometry(0.18, 0.22, 1.32, 64),
     BURNT_OAK.clone()
   );
-  pillarMain.position.set(0, 0.76, 0); pillarMain.castShadow=true; grp.add(pillarMain);
+  pillarMain.position.set(0, 0.76, 0); pillarMain.castShadow=false; grp.add(pillarMain);
 
   // -- TURNED RING DETAILS - spaced along pillar shaft ----------------------
   [0.28, 0.55, 0.82, 1.08].forEach(ry=>{
@@ -2044,13 +2042,13 @@ renderer.setAnimationLoop(()=>{
   drawFOL(t); drawKG(t);
   drawEdgeBand(t,0.016);
   // color update - throttled to 20fps
-  if(t-lastColorUpdate>0.05){
+  if(t-lastColorUpdate>0.25){
     lastColorUpdate=t;
     const{r,g,b}=getColor(t); const d=1/PHI;
     const cwCSS=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.95)`;
     const ccwCSS=`rgba(${Math.round(r*d)},${Math.round(g*d)},${Math.round(b*d)},0.82)`;
-    paintRing(srcCWCtx,4096,4096,cwCSS,0.38); srcTexCW.needsUpdate=true;
-    paintRing(srcCCWCtx,4096,4096,ccwCSS,0.38); srcTexCCW.needsUpdate=true;
+    paintRing(srcCWCtx,2048,2048,cwCSS,0.38); srcTexCW.needsUpdate=true;
+    paintRing(srcCCWCtx,2048,2048,ccwCSS,0.38); srcTexCCW.needsUpdate=true;
     srcLight.color.setRGB(r/255,g/255,b/255);
     // update phi-cycle sibling globes
     seats.forEach(s=>{

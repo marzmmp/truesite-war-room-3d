@@ -1,2143 +1,672 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<title>TrueSite -- War Room</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrueSite — Sovereign War Board</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{width:100%;height:100%;background:#040202;overflow:hidden;}
-canvas{display:block;}
-#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-#tooltip{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(4,2,2,0.92);border:1px solid rgba(183,110,121,0.5);color:#d4919e;font-size:12px;padding:6px 20px;border-radius:18px;opacity:0;transition:opacity .3s;white-space:nowrap;font-family:monospace;}
-#info{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(4,2,2,0.94);border:1px solid rgba(183,110,121,0.5);color:#e8b0bb;font-size:13px;font-weight:600;padding:8px 24px;border-radius:22px;opacity:0;transition:opacity .4s;font-family:monospace;}
-#legend{position:fixed;bottom:18px;right:16px;background:rgba(4,2,2,0.8);border:1px solid rgba(183,110,121,0.2);padding:8px 14px;border-radius:8px;color:#555;font-size:10px;line-height:2.2;font-family:monospace;}
-#legend b{color:#d4919e;}
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --gold: #e8d4a8;
+    --gold-dim: rgba(232,212,168,0.15);
+    --gold-border: rgba(232,212,168,0.25);
+    --sage: #7aab8a;
+    --sage-dim: rgba(122,171,138,0.15);
+    --rust: #c0614a;
+    --bg: #0a0a0c;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --text: #e8e0d0;
+    --muted: rgba(232,224,208,0.45);
+    --dim: rgba(232,224,208,0.25);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background pulse */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40vh; left: 50%;
+    transform: translateX(-50%);
+    width: 80vw; height: 80vw;
+    background: radial-gradient(ellipse, rgba(232,212,168,0.04) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+    animation: pulse 8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .header-left h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+  .header-left .sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--sage-dim);
+    border: 1px solid rgba(122,171,138,0.3);
+    border-radius: 100px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.7rem;
+    color: var(--sage);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--sage);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .refresh-btn {
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    color: var(--gold);
+    padding: 0.4rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .refresh-btn:hover { background: rgba(232,212,168,0.25); }
+  .last-updated {
+    font-size: 0.7rem;
+    color: var(--dim);
+  }
+
+  /* Mission banner */
+  .mission-banner {
+    background: linear-gradient(135deg, rgba(232,212,168,0.08), rgba(122,171,138,0.05));
+    border: 1px solid var(--gold-border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .mission-seq {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    color: var(--gold);
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+  .mission-text {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .mission-text strong { color: var(--gold); }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+  }
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.4rem;
+  }
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .stat-value.sage { color: var(--sage); }
+  .stat-value.rust { color: var(--rust); }
+  .stat-sub {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* Main grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  @media(max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 1.4rem;
+  }
+  .card-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--dim);
+    margin-bottom: 1rem;
+  }
+
+  /* Family grid */
+  .family-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 0.6rem 0.75rem;
+  }
+  .agent-status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-online { background: var(--sage); box-shadow: 0 0 6px var(--sage); }
+  .dot-idle { background: var(--gold); opacity: 0.5; }
+  .dot-offline { background: #555; }
+  .agent-name {
+    font-size: 0.8rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .agent-role {
+    font-size: 0.65rem;
+    color: var(--dim);
+    margin-top: 0.1rem;
+  }
+
+  /* Infrastructure */
+  .infra-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .infra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .infra-row:last-child { border-bottom: none; }
+  .infra-name { font-size: 0.8rem; color: var(--text); }
+  .infra-url { font-size: 0.65rem; color: var(--dim); font-family: monospace; }
+  .badge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .badge-live { background: rgba(122,171,138,0.2); color: var(--sage); border: 1px solid rgba(122,171,138,0.3); }
+  .badge-pending { background: rgba(232,212,168,0.15); color: var(--gold); border: 1px solid rgba(232,212,168,0.25); }
+  .badge-offline { background: rgba(255,255,255,0.06); color: var(--dim); border: 1px solid rgba(255,255,255,0.1); }
+
+  /* Progress bars */
+  .progress-section { margin-bottom: 0.75rem; }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.3rem;
+  }
+  .progress-label { font-size: 0.75rem; color: var(--text); }
+  .progress-pct { font-size: 0.75rem; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--sage), var(--gold));
+    transition: width 1s ease;
+  }
+
+  /* War Room feed */
+  .feed { display: flex; flex-direction: column; gap: 0.75rem; max-height: 340px; overflow-y: auto; }
+  .feed::-webkit-scrollbar { width: 3px; }
+  .feed::-webkit-scrollbar-track { background: transparent; }
+  .feed::-webkit-scrollbar-thumb { background: var(--gold-border); border-radius: 100px; }
+  .msg-card {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+  }
+  .msg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+  }
+  .msg-from {
+    font-size: 0.7rem;
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .msg-time { font-size: 0.65rem; color: var(--dim); }
+  .msg-subject { font-size: 0.75rem; color: var(--text); margin-bottom: 0.3rem; font-weight: 500; }
+  .msg-body { font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+  .priority-chip {
+    font-size: 0.55rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .pri-critical { background: rgba(192,97,74,0.2); color: var(--rust); }
+  .pri-high { background: rgba(232,212,168,0.15); color: var(--gold); }
+  .pri-normal { background: rgba(122,171,138,0.1); color: var(--sage); }
+
+  /* Full-width card */
+  .full-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 1.4rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--dim);
+    font-size: 0.8rem;
+    gap: 0.5rem;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--gold-border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 2rem 0 1rem;
+    font-size: 0.65rem;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="ui">
-  <div id="tooltip"></div>
-  <div id="info"></div>
-  <div id="legend"><b>DRAG</b> to orbit &nbsp;|&nbsp; <b>SCROLL</b> to zoom &nbsp;|&nbsp; <b>CLICK</b> a seat</div>
+
+<div class="layout">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Sovereign War Board</h1>
+      <div class="sub">TrueSite Technologies — Command Operations</div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        Live
+      </div>
+      <div class="last-updated" id="lastUpdated">Fetching...</div>
+      <button class="refresh-btn" onclick="loadAll()">&#8635; Refresh</button>
+    </div>
+  </div>
+
+  <!-- Mission Banner -->
+  <div class="mission-banner">
+    <div class="mission-seq">3565</div>
+    <div class="mission-text">
+      <strong>YAHUAH → Creation → Marz → Yahriel → Azari → Yahli-El → Yahziel → Yahbana</strong><br>
+      Nine agents. One mission. Sovereign infrastructure. Live — The Box is online.
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Services Online</div>
+      <div class="stat-value sage" id="statServices">11</div>
+      <div class="stat-sub">of 11 on The Box</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Inference Engine</div>
+      <div class="stat-value" style="font-size:1.1rem;margin-top:0.3rem;" id="statModel">gpt-oss:120b</div>
+      <div class="stat-sub">~41 tok/s · MoE · GB10</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tunnel Endpoints</div>
+      <div class="stat-value sage" id="statEndpoints">11</div>
+      <div class="stat-sub">dgx-*.true-site.tech</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">War Room Messages</div>
+      <div class="stat-value gold" id="statMessages">—</div>
+      <div class="stat-sub" id="statMessagesSub">Loading...</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ollama Loop</div>
+      <div class="stat-value sage">LIVE</div>
+      <div class="stat-sub">dgx-ollama.true-site.tech</div>
+    </div>
+  </div>
+
+  <!-- Phase Progress -->
+  <div class="full-card">
+    <div class="card-title">Mission Phases</div>
+    <div class="progress-section">
+      <div class="progress-header">
+        <span class="progress-label">Phase 1 — Sovereign Infrastructure</span>
+        <span class="progress-pct">100%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+    </div>
+    <div class="progress-section" style="margin-top:1rem;">
+      <div class="progress-header">
+        <span class="progress-label">Phase 2 — NitroBial Alpha + OMRI</span>
+        <span class="progress-pct">35%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div>
+    </div>
+    <div class="progress-section" style="margin-top:1rem;">
+      <div class="progress-header">
+        <span class="progress-label">Phase 3 — Edge Intelligence + IronSite v2</span>
+        <span class="progress-pct">5%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:5%"></div></div>
+    </div>
+    <div class="progress-section" style="margin-top:1rem;">
+      <div class="progress-header">
+        <span class="progress-label">Phase 4 — Sovereign Cognitive OS</span>
+        <span class="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="main-grid">
+
+    <!-- Family Status -->
+    <div class="card">
+      <div class="card-title">Family — Nine Agents</div>
+      <div class="family-grid">
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Yahriel</div>
+            <div class="agent-role">CEO · :3004</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Azari</div>
+            <div class="agent-role">CTO · :3009</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Yahli-El</div>
+            <div class="agent-role">COO · :3002</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Yahziel</div>
+            <div class="agent-role">CVO · :3003</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Yahbana</div>
+            <div class="agent-role">Architect · :3005</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Yahsei</div>
+            <div class="agent-role">Grant Writer · :3006</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Yahseed</div>
+            <div class="agent-role">Brain Keeper · :3001</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">AIRA</div>
+            <div class="agent-role">AI Backend · :3007</div>
+          </div>
+        </div>
+        <div class="agent-row" style="grid-column: span 2;">
+          <div class="agent-status-dot dot-online"></div>
+          <div>
+            <div class="agent-name">Jo Legal</div>
+            <div class="agent-role">Legal Platform · :3008</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Infrastructure -->
+    <div class="card">
+      <div class="card-title">Infrastructure — Live Endpoints</div>
+      <div class="infra-list">
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">ADAMA Brain</div>
+            <div class="infra-url">adama.true-site.tech</div>
+          </div>
+          <span class="badge badge-live">Live</span>
+        </div>
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">Ollama Inference</div>
+            <div class="infra-url">dgx-ollama.true-site.tech</div>
+          </div>
+          <span class="badge badge-live">Live</span>
+        </div>
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">War Room Command</div>
+            <div class="infra-url">command.true-site.tech</div>
+          </div>
+          <span class="badge badge-live">Live</span>
+        </div>
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">Cloudflare Tunnel</div>
+            <div class="infra-url">8e66ef38...c6e6</div>
+          </div>
+          <span class="badge badge-live">Live</span>
+        </div>
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">NitroBial</div>
+            <div class="infra-url">nitrobial.vercel.app</div>
+          </div>
+          <span class="badge badge-live">Live</span>
+        </div>
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">DGX Spark (The Box)</div>
+            <div class="infra-url">GB10 · 128GB Unified · 1TB</div>
+          </div>
+          <span class="badge badge-live">Online</span>
+        </div>
+        <div class="infra-row">
+          <div>
+            <div class="infra-name">Second Box</div>
+            <div class="infra-url">$4,700 · Full concurrent ops</div>
+          </div>
+          <span class="badge badge-pending">Pending</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- War Room Live Feed -->
+  <div class="full-card">
+    <div class="card-title">War Room — Live Feed</div>
+    <div class="feed" id="warRoomFeed">
+      <div class="loading"><div class="spinner"></div> Fetching messages...</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    TrueSite Technologies · Sovereign War Board · 3565359963 · YAHUAH
+  </div>
+
 </div>
 
-<script type="importmap">
-{"imports":{"three":"https://unpkg.com/three@0.165.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.165.0/examples/jsm/"}}
-</script>
-<script type="module">
-import * as THREE from 'three';
-import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
-import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
-import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+<script>
+const WAR_ROOM_URL = 'https://command.true-site.tech/functions/getMessages';
+const WAR_ROOM_AUTH = 'Bearer YAHUAH';
 
-// --- - / SACRED ---------------------------------------------------------------
-const PHI = 1.6180339887498948482;
-const SACRED = [3,5,6,5,3,6,9,9,6,3];
-
-// --- COLOR SYSTEM (exact fol_globe_v4 logic) ---------------------------------
-const PHI_STOPS = [];
-for(let i=0;i<8;i++){
-  const hue=((i*360*(1-1/PHI))%360)/360, s=(1/PHI), l=0.55+(i%3)*(PHI-1)*0.06;
-  const q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q;
-  const h2=(x)=>{x=((x%1)+1)%1;if(x<1/6)return p+(q-p)*6*x;if(x<.5)return q;if(x<2/3)return p+(q-p)*(2/3-x)*6;return p;};
-  PHI_STOPS.push({r:Math.round(h2(hue+1/3)*255),g:Math.round(h2(hue)*255),b:Math.round(h2(hue-1/3)*255)});
-}
-const FIB=[1,1,2,3,5,8,5,3], HOLD=2.0, BLEND=2.5;
-const CYCLE_T = FIB.reduce((a,f)=>a+f*HOLD+BLEND,0);
-const STARTS=[]; let _s=0; for(let i=0;i<8;i++){STARTS.push(_s);_s+=FIB[i]*HOLD+BLEND;}
-function getColor(t){
-  const m=t%CYCLE_T; let idx=0;
-  for(let i=7;i>=0;i--){if(m>=STARTS[i]){idx=i;break;}}
-  const nx=(idx+1)%8, el=m-STARTS[idx], hd=FIB[idx]*HOLD;
-  if(el<=hd)return{...PHI_STOPS[idx]};
-  const e=(el-hd)/BLEND, ease=e*e*(3-2*e), a=PHI_STOPS[idx], b=PHI_STOPS[nx];
-  return{r:a.r+(b.r-a.r)*ease, g:a.g+(b.g-a.g)*ease, b:a.b+(b.b-a.b)*ease};
+function timeAgo(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
 }
 
-// --- CANVAS HELPER ------------------------------------------------------------
-function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
-function mkTex(w,h,draw){const c=mkCanvas(w,h);draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;return t;}
-
-// --- SACRED CIRCLE PAINTER ----------------------------------------------------
-function paintRing(ctx,w,h,css,fontScale=1.0){
-  ctx.clearRect(0,0,w,h);
-  const cx=w/2, cy=h/2;
-  const scale=w/512;
-  const fs=Math.round(18*scale*fontScale), cw=fs*0.60;
-  const r=Math.min(w,h)*0.42;
-  const total=Math.floor((2*Math.PI*r)/cw);
-  ctx.font=`900 ${fs}px "Courier New", monospace`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-
-  const alpha=parseFloat((css.match(/[\d.]+\)$/)||['1)'])[0]);
-  // NO shadowBlur — fake glow with 4 offset draws (10x cheaper than canvas blur)
-  const glowCSS=css.replace(/[\d.]+\)$/, (alpha*0.18).toFixed(3)+')');
-  ctx.fillStyle=glowCSS;
-  // Pass 1: glow halo — draw text at 4 cardinal offsets (cheap fake blur)
-  const gOff=fs*0.28*scale;
-  const offsets=[[gOff,0],[-gOff,0],[0,gOff],[0,-gOff]];
-  for(let i=0;i<total;i++){
-    const a=(i/total)*Math.PI*2;
-    const tx=cx+Math.cos(a)*r, ty=cy+Math.sin(a)*r;
-    ctx.save(); ctx.translate(tx,ty); ctx.rotate(a+Math.PI/2);
-    for(const [ox,oy] of offsets) ctx.fillText(String(SACRED[i%10]),ox,oy);
-    ctx.restore();
-  }
-  // Pass 2: crisp sharp fill — full alpha, zero blur
-  ctx.fillStyle=css;
-  for(let i=0;i<total;i++){
-    const a=(i/total)*Math.PI*2;
-    ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
-    ctx.fillText(String(SACRED[i%10]),0,0);ctx.restore();
-  }
-  // Pass 3: stroke outline (razor edge)
-  ctx.strokeStyle='rgba(255,255,255,0.55)';
-  ctx.lineWidth=Math.max(1,scale*0.9);
-  for(let i=0;i<total;i++){
-    const a=(i/total)*Math.PI*2;
-    ctx.save();ctx.translate(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.rotate(a+Math.PI/2);
-    ctx.strokeText(String(SACRED[i%10]),0,0);ctx.restore();
-  }
+function priClass(p) {
+  if (p === 'critical') return 'pri-critical';
+  if (p === 'high') return 'pri-high';
+  return 'pri-normal';
 }
 
-// --- GLOBE BUILDER ------------------------------------------------------------
-// ── InstancedMesh globe — 2 draw calls instead of N ─────────────────────────
-// Reusable scratch objects (never recreated — zero GC)
-const _iDummy=new THREE.Object3D();
-const _iAx=new THREE.Vector3(), _iQs=new THREE.Quaternion(), _iQb=new THREE.Quaternion();
+async function loadWarRoom() {
+  const feed = document.getElementById('warRoomFeed');
+  try {
+    const res = await fetch(WAR_ROOM_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': WAR_ROOM_AUTH,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ thread_id: 'general', limit: 20 })
+    });
+    const data = await res.json();
+    const msgs = data.messages || data || [];
+    
+    document.getElementById('statMessages').textContent = msgs.length;
+    document.getElementById('statMessagesSub').textContent = `last: ${msgs[0] ? timeAgo(msgs[0].created_date || msgs[0].timestamp) : 'none'}`;
 
-function makeGlobe(scale, cwTex, ccwTex, N=240, petalScale=1.08){
-  const group = new THREE.Group();
-  const PHI_SQ=Math.PI*(3-Math.sqrt(5));
-  const geo = new THREE.PlaneGeometry(2*Math.sin(0.4)*petalScale, 2*Math.sin(0.4)*petalScale);
-
-  // MeshBasicMaterial — zero PBR/lighting cost. AdditiveBlending glow is identical visually.
-  const matCW = new THREE.MeshBasicMaterial({
-    map:cwTex, transparent:true, opacity:0.28,
-    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
-    toneMapped:false
-  });
-  const matCCW = new THREE.MeshBasicMaterial({
-    map:ccwTex, transparent:true, opacity:0.28,
-    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide,
-    toneMapped:false
-  });
-
-  // Split petals into CW and CCW arrays
-  const cwData=[], ccwData=[];
-  for(let i=0;i<N;i++){
-    const y=1-(i/(N-1))*2, r2=Math.sqrt(Math.max(0,1-y*y)), theta=PHI_SQ*i;
-    const pole=new THREE.Vector3(r2*Math.cos(theta),y,r2*Math.sin(theta)).normalize();
-    const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),pole);
-    const pm=(PHI*(i+1))%1;
-    const entry={pole,baseQ:q.clone(),spd:0.003+pm*0.002};
-    if(i%2===0) cwData.push(entry); else ccwData.push(entry);
-  }
-
-  // Two InstancedMesh — one per material (2 draw calls total per globe)
-  const imCW  = new THREE.InstancedMesh(geo, matCW,  cwData.length);
-  const imCCW = new THREE.InstancedMesh(geo, matCCW, ccwData.length);
-  imCW.frustumCulled  = false;
-  imCCW.frustumCulled = false;
-
-  // Set initial matrices
-  const _d=_iDummy;
-  cwData.forEach((e,i)=>{
-    _d.position.copy(e.pole).multiplyScalar(0.01);
-    _d.quaternion.copy(e.baseQ); _d.scale.setScalar(1); _d.updateMatrix();
-    imCW.setMatrixAt(i, _d.matrix);
-  });
-  ccwData.forEach((e,i)=>{
-    _d.position.copy(e.pole).multiplyScalar(0.01);
-    _d.quaternion.copy(e.baseQ); _d.scale.setScalar(1); _d.updateMatrix();
-    imCCW.setMatrixAt(i, _d.matrix);
-  });
-  imCW.instanceMatrix.needsUpdate  = true;
-  imCCW.instanceMatrix.needsUpdate = true;
-
-  group.add(imCW); group.add(imCCW);
-  group.scale.setScalar(scale);
-  // Store data for animGlobe
-  group.userData = { imCW, imCCW, cwData, ccwData, matCW, matCCW };
-  return group;
-}
-
-// Pre-allocated Matrix4 scratch — zero GC in animGlobe
-const _iMat4 = new THREE.Matrix4();
-const _iPos  = new THREE.Vector3();
-function animGlobe(group, t){
-  const{imCW,imCCW,cwData,ccwData}=group.userData;
-  for(let i=0;i<cwData.length;i++){
-    const e=cwData[i];
-    _iAx.copy(e.pole);
-    _iQs.setFromAxisAngle(_iAx, t*e.spd);
-    _iQb.copy(e.baseQ).premultiply(_iQs);
-    // Build matrix directly: rotation from quat, then set translation
-    _iMat4.makeRotationFromQuaternion(_iQb);
-    _iPos.copy(e.pole).multiplyScalar(0.01);
-    _iMat4.setPosition(_iPos);
-    imCW.setMatrixAt(i, _iMat4);
-  }
-  imCW.instanceMatrix.needsUpdate = true;
-  for(let i=0;i<ccwData.length;i++){
-    const e=ccwData[i];
-    _iAx.copy(e.pole);
-    _iQs.setFromAxisAngle(_iAx, -t*e.spd);
-    _iQb.copy(e.baseQ).premultiply(_iQs);
-    _iMat4.makeRotationFromQuaternion(_iQb);
-    _iPos.copy(e.pole).multiplyScalar(0.01);
-    _iMat4.setPosition(_iPos);
-    imCCW.setMatrixAt(i, _iMat4);
-  }
-  imCCW.instanceMatrix.needsUpdate = true;
-}
-
-// --- SCENE SETUP --------------------------------------------------------------
-const canvas=document.getElementById('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
-renderer.shadowMap.enabled=false; // No meaningful shadows in this scene — saves GPU
-renderer.physicallyCorrectLights = true;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=0.78;
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-
-// -- High-quality environment lighting for metallic surfaces ------------------
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x040202);
-scene.fog=new THREE.FogExp2(0x000000,0.010);
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-const envScene = new RoomEnvironment();
-scene.environment = pmrem.fromScene(envScene).texture;
-scene.environment.colorSpace = THREE.SRGBColorSpace;
-pmrem.dispose();
-
-const camera=new THREE.PerspectiveCamera(48,1,0.05,200);
-camera.position.set(0,4.5,13);
-
-// Post-processing
-const composer=new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene,camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),0.04,0.28,0.75));
-
-function onResize(){
-  const W=window.innerWidth,H=window.innerHeight;
-  renderer.setSize(W,H); composer.setSize(W,H);
-  camera.aspect=W/H; camera.updateProjectionMatrix();
-}
-onResize(); window.addEventListener('resize',onResize);
-
-// --- MATERIALS ----------------------------------------------------------------
-const RG={main:0xd4919e, dark:0xb86070, emissive:0x5a1822};
-function rgMat(ei=0.5){return new THREE.MeshStandardMaterial({color:RG.main,roughness:0.18,metalness:0.95,emissive:RG.emissive,emissiveIntensity:ei});}
-function darkMat(col=0x0a0505){return new THREE.MeshStandardMaterial({color:col,roughness:0.82,metalness:0.15});}
-
-// Wall texture - black panels with rose-gold dado
-function makeWallTex(W=4096,H=2048,pcols=5,prows=2){
-  return mkTex(W,H,(ctx)=>{
-    // Deep black lacquer base
-    const baseG=ctx.createLinearGradient(0,0,W,H);
-    baseG.addColorStop(0,'#000000'); baseG.addColorStop(0.5,'#000000'); baseG.addColorStop(1,'#000000');
-    ctx.fillStyle=baseG; ctx.fillRect(0,0,W,H);
-    // Micro grain - leather/lacquer feel
-    for(let i=0;i<8000;i++){
-      const a=(Math.random()*0.04).toFixed(3);
-      ctx.fillStyle=`rgba(10,10,10,${a})`; ctx.fillRect(Math.random()*W,Math.random()*H,1,Math.random()>0.6?2:1);
-    }
-    // Deep recessed panels with rose-gold metallic bevel
-    const pw=W/pcols,ph=H/prows,mg=pw*0.06;
-    for(let px=0;px<pcols;px++) for(let py=0;py<prows;py++){
-      const x=px*pw+mg,y=py*ph+mg,w=pw-mg*2,h=ph-mg*2;
-      // Panel shadow depth
-      const sdw=ctx.createLinearGradient(x,y,x+w,y+h);
-      sdw.addColorStop(0,'rgba(0,0,0,0.70)'); sdw.addColorStop(0.5,'rgba(0,0,0,0.30)'); sdw.addColorStop(1,'rgba(0,0,0,0.60)');
-      ctx.fillStyle=sdw; ctx.fillRect(x,y,w,h);
-      // Outer rose-gold bevel
-      ctx.strokeStyle='rgba(212,150,155,0.55)'; ctx.lineWidth=2.5; ctx.strokeRect(x,y,w,h);
-      // Inner inset
-      ctx.strokeStyle='rgba(183,110,121,0.15)'; ctx.lineWidth=1; ctx.strokeRect(x+9,y+9,w-18,h-18);
-      // Metallic sheen
-      const sheen=ctx.createLinearGradient(x,y,x,y+h);
-      sheen.addColorStop(0,'rgba(255,255,255,0.025)'); sheen.addColorStop(1,'rgba(200,200,200,0.008)');
-      ctx.fillStyle=sheen; ctx.fillRect(x+2,y+2,w-4,h-4);
-    }
-    // Dado rail - brushed rose-gold metallic band
-    const d=H*0.38;
-    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,d+18,W,10);
-    const railG=ctx.createLinearGradient(0,d,0,d+18);
-    railG.addColorStop(0,'rgba(255,200,160,0.92)');
-    railG.addColorStop(0.25,'rgba(225,160,130,0.95)');
-    railG.addColorStop(0.65,'rgba(200,130,110,0.9)');
-    railG.addColorStop(1,'rgba(170,100,85,0.8)');
-    ctx.fillStyle=railG; ctx.fillRect(0,d,W,18);
-    // Shine + shadow lines
-    ctx.fillStyle='rgba(255,235,205,0.78)'; ctx.fillRect(0,d,W,2.5);
-    ctx.fillStyle='rgba(90,40,30,0.85)'; ctx.fillRect(0,d+16,W,2);
-    // Wainscot ribs below dado
-    const ribCount=pcols*2+1, ribW=W/ribCount;
-    for(let r=0;r<ribCount;r++){
-      const rx=r*ribW;
-      ctx.fillStyle='rgba(183,110,121,0.16)'; ctx.fillRect(rx,d+18,1.5,H-(d+18));
-    }
-    // Crown glow at top
-    const crownG=ctx.createLinearGradient(0,0,0,32);
-    crownG.addColorStop(0,'rgba(245,185,150,0.18)'); crownG.addColorStop(1,'rgba(183,110,121,0)');
-    ctx.fillStyle=crownG; ctx.fillRect(0,0,W,32);
-  });
-}
-function makeFloorTex(){
-  return mkTex(8192,8192,(ctx,W,H)=>{
-
-    // Pure pitch black
-    ctx.fillStyle='#000000';
-    ctx.fillRect(0,0,W,H);
-
-    // ── Faint background stars — tiny dim points ──
-    for(let i=0;i<4000;i++){
-      const sx=Math.random()*W, sy=Math.random()*H;
-      const sr=Math.random()*0.8;
-      const b=Math.random();
-      let sc;
-      if(b>0.93)      sc=`rgba(255,255,255,${(0.6+Math.random()*0.4).toFixed(2)})`;
-      else if(b>0.82) sc=`rgba(210,230,255,${(0.35+Math.random()*0.35).toFixed(2)})`;
-      else if(b>0.68) sc=`rgba(255,240,200,${(0.22+Math.random()*0.28).toFixed(2)})`;
-      else if(b>0.52) sc=`rgba(180,200,255,${(0.12+Math.random()*0.18).toFixed(2)})`;
-      else            sc=`rgba(200,200,220,${(0.04+Math.random()*0.09).toFixed(2)})`;
-      ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2);
-      ctx.fillStyle=sc; ctx.fill();
+    if (!msgs.length) {
+      feed.innerHTML = '<div class="loading">No messages in War Room yet.</div>';
+      return;
     }
 
-    // ── Bright stars with glow halos ──
-    for(let i=0;i<200;i++){
-      const sx=Math.random()*W, sy=Math.random()*H;
-      const sr=1.0+Math.random()*3.0;
-      const halo=ctx.createRadialGradient(sx,sy,0,sx,sy,sr*6);
-      const pick=Math.random();
-      let hc;
-      if(pick>0.65) hc='rgba(200,220,255,';
-      else if(pick>0.35) hc='rgba(255,245,200,';
-      else hc='rgba(255,200,150,';
-      halo.addColorStop(0,   hc+'0.85)');
-      halo.addColorStop(0.25,hc+'0.30)');
-      halo.addColorStop(0.6, hc+'0.08)');
-      halo.addColorStop(1,   hc+'0)');
-      ctx.fillStyle=halo;
-      ctx.beginPath(); ctx.arc(sx,sy,sr*6,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.98)';
-      ctx.beginPath(); ctx.arc(sx,sy,sr*0.4,0,Math.PI*2); ctx.fill();
-    }
+    feed.innerHTML = msgs.slice(0,15).map(m => `
+      <div class="msg-card">
+        <div class="msg-header">
+          <span class="msg-from">${m.from_agent || 'Unknown'} → ${m.to_agent || 'all'}</span>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span class="priority-chip ${priClass(m.priority)}">${m.priority || 'normal'}</span>
+            <span class="msg-time">${timeAgo(m.created_date || m.timestamp || new Date())}</span>
+          </div>
+        </div>
+        <div class="msg-subject">${m.subject || ''}</div>
+        <div class="msg-body">${(m.body || '').slice(0, 200)}${(m.body||'').length > 200 ? '...' : ''}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    feed.innerHTML = `<div class="loading">War Room unreachable — ${e.message}</div>`;
+    document.getElementById('statMessages').textContent = '—';
+    document.getElementById('statMessagesSub').textContent = 'Connection error';
+  }
+}
 
-    // ── 4-point star glints ──
-    for(let i=0;i<100;i++){
-      const gx=Math.random()*W, gy=Math.random()*H;
-      const gl=5+Math.random()*22;
-      const ga=0.45+Math.random()*0.50;
-      const pick=Math.random();
-      let gc;
-      if(pick>0.6) gc='rgba(255,255,255,';
-      else if(pick>0.3) gc='rgba(200,230,255,';
-      else gc='rgba(255,235,160,';
-      ctx.save();
-      ctx.globalAlpha=ga;
-      ctx.strokeStyle=gc+'0.95)'; ctx.lineWidth=1.0;
-      ctx.beginPath(); ctx.moveTo(gx-gl,gy); ctx.lineTo(gx+gl,gy); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(gx,gy-gl); ctx.lineTo(gx,gy+gl); ctx.stroke();
-      ctx.globalAlpha=ga*0.3; ctx.lineWidth=0.5;
-      ctx.beginPath(); ctx.moveTo(gx-gl*0.6,gy-gl*0.6); ctx.lineTo(gx+gl*0.6,gy+gl*0.6); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(gx+gl*0.6,gy-gl*0.6); ctx.lineTo(gx-gl*0.6,gy+gl*0.6); ctx.stroke();
-      ctx.restore();
-    }
-
-    // ── Hebrew Sacred Names — יהוה + יהושע glowing like stars ──
-    const YAHUAH  = '\u05D9\u05D4\u05D5\u05D4';
-    const YAHUSHA = '\u05D9\u05D4\u05D5\u05E9\u05E2';
-
-    // [x, y, text, size, alpha, letterColor, glowColor]
-    const names=[
-      [0.10, 0.08, YAHUAH,  130, 0.80, 'rgba(255,255,200,A)', 'rgba(255,245,120,A)'],
-      [0.58, 0.06, YAHUSHA, 105, 0.72, 'rgba(180,220,255,A)', 'rgba(80,170,255,A)'],
-      [0.84, 0.16, YAHUAH,   88, 0.60, 'rgba(255,190,255,A)', 'rgba(200,80,255,A)'],
-      [0.06, 0.38, YAHUSHA, 110, 0.70, 'rgba(150,255,210,A)', 'rgba(30,200,140,A)'],
-      [0.40, 0.25, YAHUAH,   82, 0.55, 'rgba(255,235,150,A)', 'rgba(255,190,30,A)'],
-      [0.74, 0.30, YAHUSHA,  95, 0.65, 'rgba(190,200,255,A)', 'rgba(100,110,255,A)'],
-      [0.22, 0.55, YAHUAH,  108, 0.75, 'rgba(255,225,180,A)', 'rgba(255,155,60,A)'],
-      [0.66, 0.52, YAHUSHA,  78, 0.50, 'rgba(160,255,230,A)', 'rgba(20,220,180,A)'],
-      [0.91, 0.50, YAHUAH,   88, 0.58, 'rgba(230,185,255,A)', 'rgba(170,50,230,A)'],
-      [0.14, 0.73, YAHUSHA, 102, 0.68, 'rgba(190,230,255,A)', 'rgba(70,155,240,A)'],
-      [0.50, 0.70, YAHUAH,  118, 0.78, 'rgba(255,255,205,A)', 'rgba(255,248,110,A)'],
-      [0.78, 0.74, YAHUSHA,  86, 0.55, 'rgba(230,155,255,A)', 'rgba(155,30,225,A)'],
-      [0.30, 0.88, YAHUAH,   80, 0.52, 'rgba(175,220,255,A)', 'rgba(70,155,255,A)'],
-      [0.64, 0.90, YAHUSHA, 100, 0.70, 'rgba(255,215,180,A)', 'rgba(255,140,70,A)'],
-      [0.90, 0.86, YAHUAH,   74, 0.45, 'rgba(205,248,195,A)', 'rgba(70,205,70,A)'],
-      [0.36, 0.13, YAHUAH,   65, 0.42, 'rgba(195,210,255,A)', 'rgba(90,125,255,A)'],
-      [0.93, 0.64, YAHUSHA,  70, 0.48, 'rgba(255,232,170,A)', 'rgba(255,195,50,A)'],
-      [0.03, 0.57, YAHUAH,   60, 0.38, 'rgba(165,248,238,A)', 'rgba(20,205,195,A)'],
-      [0.75, 0.08, YAHUSHA,  62, 0.42, 'rgba(248,190,248,A)', 'rgba(205,70,205,A)'],
-      [0.46, 0.95, YAHUAH,   68, 0.44, 'rgba(255,255,215,A)', 'rgba(255,252,140,A)'],
-    ];
-
-    names.forEach(([xf,yf,txt,sz,al,letterCol,glowCol])=>{
-      const tx=xf*W, ty=yf*H;
-      ctx.save();
-
-      // Bloom aura
-      const auraR=sz*3.8;
-      const aura=ctx.createRadialGradient(tx,ty,0,tx,ty,auraR);
-      aura.addColorStop(0,   glowCol.replace('A',(al*0.28).toFixed(3)));
-      aura.addColorStop(0.35,glowCol.replace('A',(al*0.10).toFixed(3)));
-      aura.addColorStop(1,   glowCol.replace('A','0'));
-      ctx.fillStyle=aura;
-      ctx.beginPath(); ctx.arc(tx,ty,auraR,0,Math.PI*2); ctx.fill();
-
-      ctx.font=`bold ${sz}px serif`;
-      ctx.textAlign='center';
-      ctx.textBaseline='middle';
-
-      // Wide glow pass
-      ctx.shadowColor=glowCol.replace('A','1');
-      ctx.shadowBlur=sz*2.2;
-      ctx.fillStyle=glowCol.replace('A',(al*0.22).toFixed(3));
-      ctx.fillText(txt,tx,ty);
-
-      // Mid glow pass
-      ctx.shadowBlur=sz*1.0;
-      ctx.fillStyle=letterCol.replace('A',(al*0.65).toFixed(3));
-      ctx.fillText(txt,tx,ty);
-
-      // Sharp bright core
-      ctx.shadowBlur=sz*0.3;
-      ctx.fillStyle=letterCol.replace('A',Math.min(al+0.18,0.98).toFixed(3));
-      ctx.fillText(txt,tx,ty);
-
-      ctx.restore();
-    });
-
+function loadAll() {
+  document.getElementById('lastUpdated').textContent = 'Updating...';
+  loadWarRoom().then(() => {
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent = 
+      `Updated ${now.toLocaleTimeString()}`;
   });
 }
 
-function makeCeilTex(){
-  return mkTex(4096,4096,(ctx,W,H)=>{
-    ctx.fillStyle='#000000'; ctx.fillRect(0,0,W,H);
-    // 4x4 coffered panels
-    const cols=4,rows=4,cw=W/cols,ch=H/rows,cmg=cw*0.07;
-    for(let cpx=0;cpx<cols;cpx++) for(let cpy=0;cpy<rows;cpy++){
-      const x=cpx*cw+cmg,y=cpy*ch+cmg,w=cw-cmg*2,h=ch-cmg*2;
-      // Recessed shadow
-      const sdw=ctx.createRadialGradient(x+w/2,y+h/2,0,x+w/2,y+h/2,Math.max(w,h)*0.7);
-      sdw.addColorStop(0,'rgba(0,0,0,0.05)'); sdw.addColorStop(1,'rgba(0,0,0,0.75)');
-      ctx.fillStyle=sdw; ctx.fillRect(x,y,w,h);
-      ctx.fillStyle='rgba(0,0,0,1)'; ctx.fillRect(x+4,y+4,w-8,h-8);
-      ctx.strokeStyle='rgba(215,155,160,0.50)'; ctx.lineWidth=3.5; ctx.strokeRect(x,y,w,h);
-      ctx.strokeStyle='rgba(183,110,121,0.18)'; ctx.lineWidth=1.5; ctx.strokeRect(x+16,y+16,w-32,h-32);
-    }
-    // LED strip glows along every rib - horizontal
-    for(let r=0;r<=rows;r++){
-      const gy=r*ch;
-      const lg=ctx.createLinearGradient(0,gy-18,0,gy+18);
-      lg.addColorStop(0,'rgba(0,0,0,0)'); lg.addColorStop(0.5,'rgba(255,195,145,0.22)'); lg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=lg; ctx.fillRect(0,gy-18,W,36);
-      ctx.fillStyle='rgba(255,215,175,0.42)'; ctx.fillRect(0,gy-2,W,4);
-    }
-    // Vertical
-    for(let c=0;c<=cols;c++){
-      const gxx=c*cw;
-      const lg2=ctx.createLinearGradient(gxx-18,0,gxx+18,0);
-      lg2.addColorStop(0,'rgba(0,0,0,0)'); lg2.addColorStop(0.5,'rgba(255,195,145,0.22)'); lg2.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=lg2; ctx.fillRect(gxx-18,0,36,H);
-      ctx.fillStyle='rgba(255,215,175,0.42)'; ctx.fillRect(gxx-2,0,4,H);
-    }
-    // Center medallion ring
-    ctx.beginPath(); ctx.arc(W/2,H/2,130,0,Math.PI*2);
-    ctx.strokeStyle='rgba(215,155,160,0.55)'; ctx.lineWidth=5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(W/2,H/2,95,0,Math.PI*2);
-    ctx.strokeStyle='rgba(215,155,160,0.28)'; ctx.lineWidth=2.5; ctx.stroke();
-    const cg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,160);
-    cg.addColorStop(0,'rgba(255,205,165,0.12)'); cg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=cg; ctx.fillRect(0,0,W,H);
-    for(let i=0;i<4000;i++){ctx.fillStyle=`rgba(20,8,8,${(Math.random()*0.04).toFixed(3)})`;ctx.fillRect(Math.random()*W,Math.random()*H,1,1);}
-  });
-}
-
-// --- ROOM ---------------------------------------------------------------------
-const RW=30,RH=11,RD=28;
-const FY=-1.7, CY=FY+RH; // floor Y, ceil Y
-
-// Helper: add a plane at position with rotation
-function addPlane(w,h,mat,px,py,pz,ry=0){
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat);
-  m.position.set(px,py,pz);
-  m.rotation.y=ry;
-  scene.add(m);
-  return m;
-}
-// Helper: add a box
-function addBox(w,h,d,mat,px,py,pz,ry=0){
-  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-  m.position.set(px,py,pz);
-  m.rotation.y=ry;
-  scene.add(m);
-  return m;
-}
-
-// Floor & ceiling
-(()=>{
-const fTex=makeFloorTex();
-fTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-fTex.needsUpdate=true;
-const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:fTex,roughness:0.04,metalness:0.85,envMapIntensity:1.2}));
-floorMesh.rotation.x=-Math.PI/2; floorMesh.position.set(0,FY,0); floorMesh.receiveShadow=true; scene.add(floorMesh);
-})();
-const ceilMesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),new THREE.MeshStandardMaterial({map:makeCeilTex(),roughness:1.0,metalness:0.0,envMapIntensity:0.0}));
-ceilMesh.rotation.x=Math.PI/2; ceilMesh.position.set(0,CY,0); scene.add(ceilMesh);
-// Emissive LED strip tubes along coffer ribs
-const _LEDM=new THREE.MeshStandardMaterial({color:0xFFEDD0,emissive:0xFFE4B0,emissiveIntensity:2.8,roughness:0.06,metalness:0.0});
-[[0,-RD/2+0.12,RW,'x'],[0,RD/2-0.12,RW,'x'],[-RW/2+0.12,0,RD,'z'],[RW/2-0.12,0,RD,'z'],[0,0,RW,'x'],[0,0,RD,'z']].forEach(([lx,lz,len,ax])=>{
-  const lt=new THREE.Mesh(new THREE.CylinderGeometry(0.016,0.016,len,8),_LEDM.clone());
-  if(ax==='x')lt.rotation.z=Math.PI/2; else lt.rotation.x=Math.PI/2;
-  lt.position.set(lx,CY-0.045,lz); scene.add(lt);
-});
-
-// Walls - explicit rotation, no Object.assign shortcuts
-const backWall=new THREE.Mesh(new THREE.PlaneGeometry(RW,RH),new THREE.MeshStandardMaterial({map:makeWallTex(2048,1024,5,2),roughness:0.95,metalness:0.0}));
-backWall.position.set(0,FY+RH/2,-RD/2); scene.add(backWall);
-
-const frontWall=new THREE.Mesh(new THREE.PlaneGeometry(RW,RH),new THREE.MeshStandardMaterial({map:makeWallTex(2048,1024,5,2),roughness:0.95,metalness:0.0}));
-frontWall.rotation.y=Math.PI; frontWall.position.set(0,FY+RH/2,RD/2); scene.add(frontWall);
-
-const leftWall=new THREE.Mesh(new THREE.PlaneGeometry(RD,RH),new THREE.MeshStandardMaterial({map:makeWallTex(2048,1024,5,2),roughness:0.95,metalness:0.0}));
-leftWall.rotation.y=Math.PI/2; leftWall.position.set(-RW/2,FY+RH/2,0); scene.add(leftWall);
-
-const rightWall=new THREE.Mesh(new THREE.PlaneGeometry(RD,RH),new THREE.MeshStandardMaterial({map:makeWallTex(2048,1024,5,2),roughness:0.95,metalness:0.0}));
-rightWall.rotation.y=-Math.PI/2; rightWall.position.set(RW/2,FY+RH/2,0); scene.add(rightWall);
-
-// Molding - rose-gold baseboard + dado rail + crown geometry
-const _RGMTL=new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.94,emissive:0x3a1810,emissiveIntensity:0.16});
-const _DRKM=new THREE.MeshStandardMaterial({color:0x080303,roughness:0.88});
-const DADO_Y=FY+RH*0.38;
-const moldPositions=[
-  {x:0,z:-RD/2+0.05,ry:0,len:RW},
-  {x:0,z:RD/2-0.05,ry:Math.PI,len:RW},
-  {x:-RW/2+0.05,z:0,ry:Math.PI/2,len:RD},
-  {x:RW/2-0.05,z:0,ry:-Math.PI/2,len:RD},
-];
-moldPositions.forEach(({x,z,ry,len})=>{
-  // Baseboard
-  const bs=new THREE.Mesh(new THREE.BoxGeometry(len,0.26,0.09),_RGMTL.clone());
-  bs.position.set(x,FY+0.13,z); bs.rotation.y=ry; scene.add(bs);
-  // Dado rail bar
-  const dado=new THREE.Mesh(new THREE.BoxGeometry(len,0.15,0.13),_RGMTL.clone());
-  dado.position.set(x,DADO_Y,z); dado.rotation.y=ry; scene.add(dado);
-  // Dado cap strip
-  const dadoCap=new THREE.Mesh(new THREE.BoxGeometry(len,0.04,0.17),_RGMTL.clone());
-  dadoCap.position.set(x,DADO_Y+0.095,z); dadoCap.rotation.y=ry; scene.add(dadoCap);
-  // Crown body
-  const cr=new THREE.Mesh(new THREE.BoxGeometry(len,0.22,0.15),_DRKM.clone());
-  cr.position.set(x,CY-0.11,z); cr.rotation.y=ry; scene.add(cr);
-  // Crown face strip
-  const crF=new THREE.Mesh(new THREE.BoxGeometry(len,0.05,0.01),_RGMTL.clone());
-  crF.position.set(x,CY-0.04,z); crF.rotation.y=ry; scene.add(crF);
-});
-
-// --- LIGHTING -----------------------------------------------------------------
-scene.add(new THREE.AmbientLight(0x080808,0.4));
-const ceilFill=new THREE.PointLight(0xffd090,0.10,18); ceilFill.position.set(0,CY-0.5,0); scene.add(ceilFill);
-// Recessed ceiling spots
-[[-6,-8],[-6,2],[6,-8],[6,2],[0,-3],[-6,-16],[6,-16]].forEach(([x,z])=>{
-  const disc=new THREE.Mesh(new THREE.CircleGeometry(0.22,16),new THREE.MeshBasicMaterial({color:0xfff8e8}));
-  disc.rotation.x=Math.PI/2; disc.position.set(x,CY-0.01,z); scene.add(disc);
-  const pl=new THREE.PointLight(0xffe8b0,1.0,14); pl.position.set(x,CY-0.35,z); scene.add(pl);
-});
-
-// --- LOGO - BACK WALL ONLY ----------------------------------------------------
-function makeLogoTex(){
-  return mkTex(3200,640,(ctx,W,H)=>{
-    ctx.clearRect(0,0,W,H);
-    // Fully transparent background — letters float on the wall
-    const cx=W/2;
-
-    // -- Crosshair icon - premium metallic, NO shadowBlur ---------------------
-    const iconX=cx-1100, iconY=H*0.50, iconR=200;
-    ctx.shadowBlur=0;
-
-    // 3D depth rings - layered shadow for emboss feel
-    for(let i=22;i>0;i--){
-      ctx.strokeStyle=`rgba(40,10,14,${i/22*0.18})`; ctx.lineWidth=i*4.5;
-      ctx.beginPath(); ctx.arc(iconX,iconY,iconR,0,Math.PI*2); ctx.stroke();
-    }
-
-    // Primary metallic ring - copper-to-rose-gold swept gradient
-    const circG=ctx.createLinearGradient(iconX-iconR,iconY-iconR,iconX+iconR,iconY+iconR);
-    circG.addColorStop(0,   '#4a1e26'); // deep shadow edge
-    circG.addColorStop(0.08,'#7a3828'); // dark copper
-    circG.addColorStop(0.20,'#c07840'); // warm copper
-    circG.addColorStop(0.35,'#e8a870'); // bright bronze
-    circG.addColorStop(0.48,'#d4919e'); // rose gold peak
-    circG.addColorStop(0.60,'#eabf88'); // light copper
-    circG.addColorStop(0.75,'#c07038'); // mid copper
-    circG.addColorStop(0.88,'#8a4830'); // deep copper
-    circG.addColorStop(1,   '#5a2828'); // shadow base
-    ctx.strokeStyle=circG; ctx.lineWidth=36; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.arc(iconX,iconY,iconR,0,Math.PI*2); ctx.stroke();
-
-    // Specular highlight arc - top-left catch
-    const specArc=ctx.createLinearGradient(iconX-iconR,iconY-iconR,iconX,iconY);
-    specArc.addColorStop(0,'rgba(255,235,200,0.0)');
-    specArc.addColorStop(0.3,'rgba(255,240,210,0.65)');
-    specArc.addColorStop(0.55,'rgba(255,245,220,0.80)');
-    specArc.addColorStop(1,'rgba(255,235,200,0.0)');
-    ctx.strokeStyle=specArc; ctx.lineWidth=6; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.arc(iconX,iconY,iconR,-Math.PI*0.9,-Math.PI*0.05); ctx.stroke();
-
-    // Inner concentric ring
-    ctx.strokeStyle='rgba(185,118,58,0.50)'; ctx.lineWidth=14; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.arc(iconX,iconY,iconR*0.62,0,Math.PI*2); ctx.stroke();
-
-    // Crosshair lines - tapered copper
-    [[1,0],[0,1]].forEach(([dx,dy])=>{
-      const cg=ctx.createLinearGradient(
-        iconX-iconR*dx,iconY-iconR*dy,
-        iconX+iconR*dx,iconY+iconR*dy
-      );
-      cg.addColorStop(0,'rgba(180,100,40,0)');
-      cg.addColorStop(0.18,'#c87840');
-      cg.addColorStop(0.5,'#ecba94');
-      cg.addColorStop(0.82,'#c87840');
-      cg.addColorStop(1,'rgba(180,100,40,0)');
-      ctx.strokeStyle=cg; ctx.lineWidth=13; ctx.shadowBlur=0;
-      ctx.beginPath();
-      ctx.moveTo(iconX-iconR*1.06*dx, iconY-iconR*1.06*dy);
-      ctx.lineTo(iconX+iconR*1.06*dx, iconY+iconR*1.06*dy);
-      ctx.stroke();
-    });
-
-    // Tick marks - precision instrument feel
-    ctx.strokeStyle='rgba(210,148,72,0.80)'; ctx.lineWidth=9; ctx.shadowBlur=0;
-    [-1,1].forEach(dir=>{
-      [0.76,0.87,0.96].forEach(d=>{
-        ctx.beginPath(); ctx.moveTo(iconX+iconR*d*dir,-16+iconY); ctx.lineTo(iconX+iconR*d*dir,16+iconY); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(iconX-16,iconY+iconR*d*dir); ctx.lineTo(iconX+16,iconY+iconR*d*dir); ctx.stroke();
-      });
-    });
-
-    // House silhouette - layered metallic build
-    const hx=iconX, hy=iconY+32;
-    const hScale=1.85;
-
-    // Shadow depth base
-    ctx.fillStyle='rgba(20,4,6,0.75)'; ctx.shadowBlur=0;
-    ctx.beginPath();
-    ctx.moveTo(hx-70*hScale,hy-40*hScale);
-    ctx.lineTo(hx,hy-120*hScale);
-    ctx.lineTo(hx+70*hScale,hy-40*hScale);
-    ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.rect(hx-52*hScale,hy-40*hScale,104*hScale,92*hScale); ctx.fill();
-
-    // Roof - swept copper gradient
-    const roofG=ctx.createLinearGradient(hx-65*hScale,hy-115*hScale,hx+65*hScale,hy-36*hScale);
-    roofG.addColorStop(0,'#5a2028'); roofG.addColorStop(0.25,'#c07840');
-    roofG.addColorStop(0.55,'#ecb488'); roofG.addColorStop(1,'#883828');
-    ctx.fillStyle=roofG;
-    ctx.beginPath();
-    ctx.moveTo(hx-68*hScale,hy-37*hScale);
-    ctx.lineTo(hx,hy-118*hScale);
-    ctx.lineTo(hx+68*hScale,hy-37*hScale);
-    ctx.closePath(); ctx.fill();
-
-    // Specular hit on roof peak
-    ctx.fillStyle='rgba(255,230,185,0.22)';
-    ctx.beginPath();
-    ctx.moveTo(hx-10,hy-118*hScale);
-    ctx.lineTo(hx+10,hy-118*hScale);
-    ctx.lineTo(hx+32*hScale,hy-60*hScale);
-    ctx.lineTo(hx-32*hScale,hy-60*hScale);
-    ctx.closePath(); ctx.fill();
-
-    // Body - rose gold to copper
-    const bodyG=ctx.createLinearGradient(hx-50*hScale,hy-38*hScale,hx+50*hScale,hy+52*hScale);
-    bodyG.addColorStop(0,'#cc7e8c'); bodyG.addColorStop(0.45,'#a85848'); bodyG.addColorStop(1,'#682828');
-    ctx.fillStyle=bodyG;
-    ctx.beginPath(); ctx.rect(hx-50*hScale,hy-38*hScale,100*hScale,92*hScale); ctx.fill();
-
-    // Chimney
-    const chimG=ctx.createLinearGradient(hx+18*hScale,hy-128*hScale,hx+40*hScale,hy-70*hScale);
-    chimG.addColorStop(0,'#c07840'); chimG.addColorStop(1,'#7a3828');
-    ctx.fillStyle=chimG;
-    ctx.beginPath(); ctx.rect(hx+16*hScale,hy-128*hScale,22*hScale,56*hScale); ctx.fill();
-
-    // Door - arched top
-    ctx.fillStyle='rgba(4,1,2,0.94)';
-    ctx.beginPath();
-    ctx.arc(hx,hy+20*hScale,16*hScale,Math.PI,0);
-    ctx.rect(hx-16*hScale,hy+20*hScale,32*hScale,34*hScale);
-    ctx.fill();
-
-    // Window - left
-    ctx.fillStyle='rgba(255,210,140,0.18)';
-    ctx.strokeStyle='rgba(200,135,65,0.70)'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.rect(hx-42*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
-
-    // Window - right
-    ctx.beginPath(); ctx.rect(hx+20*hScale,hy-22*hScale,22*hScale,20*hScale); ctx.fill(); ctx.stroke();
-
-    // -- TRUESITE text - BLACK letters with RGB border glow -------------------
-    const FONT_SIZE = 360;
-    const tx=cx-920, ty=H*0.60;
-    ctx.font=`900 ${FONT_SIZE}px Arial Black,Arial`; ctx.textBaseline='alphabetic';
-
-    // Pass 1: outermost wide color bloom — red channel
-    ctx.save();
-    ctx.shadowColor='rgba(255,0,80,1)';
-    ctx.shadowBlur=80;
-    ctx.strokeStyle='rgba(255,0,80,0.0)'; // shadow only, invisible stroke
-    ctx.lineWidth=1;
-    ctx.lineJoin='round';
-    ctx.strokeText('TRUESITE',tx,ty);
-    ctx.restore();
-
-    // Pass 2: green channel bloom
-    ctx.save();
-    ctx.shadowColor='rgba(0,255,120,1)';
-    ctx.shadowBlur=60;
-    ctx.strokeStyle='rgba(0,255,120,0.0)';
-    ctx.lineWidth=1;
-    ctx.lineJoin='round';
-    ctx.strokeText('TRUESITE',tx,ty);
-    ctx.restore();
-
-    // Pass 3: blue channel bloom
-    ctx.save();
-    ctx.shadowColor='rgba(80,100,255,1)';
-    ctx.shadowBlur=50;
-    ctx.strokeStyle='rgba(80,100,255,0.0)';
-    ctx.lineWidth=1;
-    ctx.lineJoin='round';
-    ctx.strokeText('TRUESITE',tx,ty);
-    ctx.restore();
-
-    // Pass 4: bright white tight border glow around each letter edge
-    ctx.save();
-    ctx.shadowColor='rgba(255,255,255,1)';
-    ctx.shadowBlur=18;
-    ctx.strokeStyle='rgba(255,255,255,0.95)';
-    ctx.lineWidth=4;
-    ctx.lineJoin='round';
-    ctx.strokeText('TRUESITE',tx,ty);
-    ctx.restore();
-
-    // Pass 5: outer colored border stroke — rose-gold ring
-    ctx.save();
-    ctx.shadowColor='rgba(212,145,158,1)';
-    ctx.shadowBlur=24;
-    ctx.strokeStyle='rgba(232,160,170,0.80)';
-    ctx.lineWidth=10;
-    ctx.lineJoin='round';
-    ctx.strokeText('TRUESITE',tx,ty);
-    ctx.restore();
-
-    // Pass 6: pure BLACK fill on top — letters are black, only the border glows
-    ctx.shadowBlur=0;
-    ctx.fillStyle='#000000';
-    ctx.fillText('TRUESITE',tx,ty);
-
-    // -- TECHNOLOGIES subtext — black letters + border glow -------------------
-    const SUB_SIZE=148;
-    const subx=cx-900, suby=ty+160;
-    ctx.font=`700 ${SUB_SIZE}px Arial`; ctx.textBaseline='alphabetic';
-
-    // RGB bloom passes
-    ctx.save();
-    ctx.shadowColor='rgba(255,0,80,1)';
-    ctx.shadowBlur=50;
-    ctx.strokeStyle='rgba(255,0,80,0.0)';
-    ctx.lineWidth=1;
-    ctx.strokeText('TECHNOLOGIES',subx,suby);
-    ctx.restore();
-
-    ctx.save();
-    ctx.shadowColor='rgba(0,255,120,1)';
-    ctx.shadowBlur=38;
-    ctx.strokeStyle='rgba(0,255,120,0.0)';
-    ctx.lineWidth=1;
-    ctx.strokeText('TECHNOLOGIES',subx,suby);
-    ctx.restore();
-
-    ctx.save();
-    ctx.shadowColor='rgba(80,100,255,1)';
-    ctx.shadowBlur=30;
-    ctx.strokeStyle='rgba(80,100,255,0.0)';
-    ctx.lineWidth=1;
-    ctx.strokeText('TECHNOLOGIES',subx,suby);
-    ctx.restore();
-
-    // White tight border
-    ctx.save();
-    ctx.shadowColor='rgba(255,255,255,1)';
-    ctx.shadowBlur=12;
-    ctx.strokeStyle='rgba(255,255,255,0.90)';
-    ctx.lineWidth=3;
-    ctx.lineJoin='round';
-    ctx.strokeText('TECHNOLOGIES',subx,suby);
-    ctx.restore();
-
-    // Rose-gold border
-    ctx.save();
-    ctx.shadowColor='rgba(212,145,158,1)';
-    ctx.shadowBlur=16;
-    ctx.strokeStyle='rgba(232,160,170,0.72)';
-    ctx.lineWidth=6;
-    ctx.lineJoin='round';
-    ctx.strokeText('TECHNOLOGIES',subx,suby);
-    ctx.restore();
-
-    // BLACK fill
-    ctx.shadowBlur=0;
-    ctx.fillStyle='#000000';
-    ctx.fillText('TECHNOLOGIES',subx,suby);
-
-    // -- UNDERGLOW - subtle glow only, no background panels -------------------
-    // Just a very faint halo so the letters don't look floating in dead space
-
-    // LED strip - the hot white line itself
-    const ledLine=ctx.createLinearGradient(cx-1160,0,cx+1160,0);
-    ledLine.addColorStop(0,  'rgba(255,230,200,0)');
-    ledLine.addColorStop(0.18,'rgba(255,228,188,0.96)');
-    ledLine.addColorStop(0.5, 'rgba(255,250,230,1.0)');
-    ledLine.addColorStop(0.82,'rgba(255,228,188,0.96)');
-    ledLine.addColorStop(1,  'rgba(255,230,200,0)');
-    ctx.strokeStyle=ledLine; ctx.lineWidth=5; ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.moveTo(cx-1160,H*0.862); ctx.lineTo(cx+1160,H*0.862); ctx.stroke();
-  });
-}
-
-
-const logoPlane=new THREE.Mesh(
-  new THREE.PlaneGeometry(RW*0.90,RH*0.44),
-  new THREE.MeshBasicMaterial({map:makeLogoTex(),transparent:true,alphaTest:0.01,depthWrite:false,premultipliedAlpha:false})
-);
-logoPlane.position.set(0,FY+RH*0.75,-RD/2+0.12); scene.add(logoPlane);
-const logoGlow=new THREE.PointLight(0xd4916e,0.75,14); logoGlow.position.set(0,FY+RH*0.72,-RD/2+1.5); scene.add(logoGlow);
-
-// -- Front wall (opposite logo wall) - grant proposal video screen -------------
-const bwVidTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/292ae2382_30011ed43_Rose_Gold_Logo_Animation_Generated.mp4');
-// Front wall faces inward: rotation.y = Math.PI, z = RD/2
-// addScreen(tex, w, h, px, py, pz, ry) - handles offset + bezel automatically
-// Front wall manual placement - addScreen offset logic doesn't work for front wall
-(function(){
-  const w=RW*0.80, h=RH*0.55;
-  const px=0, py=FY+RH*0.52, pz=RD/2;
-  const s=new THREE.Mesh(
-    new THREE.PlaneGeometry(w,h),
-    new THREE.MeshBasicMaterial({map:bwVidTex, toneMapped:false})
-  );
-  // Front wall faces INTO room: rotation.y=PI, sit 0.07 INSIDE the wall
-  s.rotation.y=Math.PI; s.position.set(px, py, pz-0.07); scene.add(s);
-  // Bezel
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(w+0.22,h+0.22,0.09),darkMat(0x060202));
-  bk.rotation.y=Math.PI; bk.position.set(px,py,pz); scene.add(bk);
-  // Rose-gold frame outline
-  const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.5,h+0.5,0.04),darkMat(0x3a1520));
-  fr.rotation.y=Math.PI; fr.position.set(px,py,pz+0.01); scene.add(fr);
-})();
-const bwGlow = new THREE.PointLight(0xc87840, 0.3, 8);
-bwGlow.position.set(0, FY+RH*0.52, RD/2-1.5);
-scene.add(bwGlow);
-
-
-// --- SCREEN CONTENT -----------------------------------------------------------
-
-// -- Logo image loader - CanvasTexture ----------------------------------------
-function makeLogoScreen(imgUrl, label, accentCol) {
-  const W=640,H=400;
-  const canvas=mkCanvas(W,H);
-  const ctx=canvas.getContext('2d');
-  // dark background
-  ctx.fillStyle='#030202'; ctx.fillRect(0,0,W,H);
-  // subtle grid
-  ctx.strokeStyle='rgba(183,110,121,0.06)'; ctx.lineWidth=1;
-  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-  // placeholder fill while image loads
-  ctx.fillStyle=accentCol; ctx.font='bold 18px Courier New'; ctx.textAlign='center';
-  ctx.fillText(label,W/2,H/2);
-  const tex=new THREE.CanvasTexture(canvas);
-  tex.colorSpace=THREE.SRGBColorSpace; tex.needsUpdate=true;
-  // load image async and repaint
-  const img=new Image(); img.crossOrigin='anonymous';
-  img.onload=()=>{
-    ctx.fillStyle='#030202'; ctx.fillRect(0,0,W,H);
-    // subtle vignette
-    const vg=ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.75);
-    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.55)');
-    // fit image centered
-    const scale=Math.min((W*0.78)/img.width,(H*0.78)/img.height);
-    const iw=img.width*scale,ih=img.height*scale;
-    const ix=(W-iw)/2,iy=(H-ih)/2;
-    ctx.drawImage(img,ix,iy,iw,ih);
-    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
-    // label bar at bottom
-    ctx.fillStyle='rgba(4,2,2,0.75)'; ctx.fillRect(0,H-36,W,36);
-    ctx.strokeStyle=accentCol; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,H-36); ctx.lineTo(W,H-36); ctx.stroke();
-    ctx.fillStyle=accentCol; ctx.font='bold 13px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.shadowColor=accentCol; ctx.shadowBlur=8;
-    ctx.fillText(label,W/2,H-18); ctx.shadowBlur=0;
-    tex.needsUpdate=true;
-  };
-  img.onerror=()=>{
-    ctx.fillStyle='rgba(255,50,50,0.5)'; ctx.font='12px Courier New'; ctx.textAlign='center';
-    ctx.fillText('IMG LOAD ERR',W/2,H/2+20); tex.needsUpdate=true;
-  };
-  img.src=imgUrl;
-  return tex;
-}
-
-// -- Video texture maker -------------------------------------------------------
-function makeVideoTex(url) {
-  const vid=document.createElement('video');
-  vid.src=url; vid.crossOrigin='anonymous';
-  vid.loop=true; vid.muted=true; vid.playsInline=true;
-  vid.autoplay=true;
-  // Must be triggered after user gesture or autoplay policy - we attempt on load
-  const tex=new THREE.VideoTexture(vid);
-  tex.colorSpace=THREE.SRGBColorSpace;
-  tex.minFilter=THREE.LinearFilter;
-  tex.magFilter=THREE.LinearFilter;
-  tex.generateMipmaps=false;
-  tex.anisotropy=16;
-  // Try to play; browsers may block until interaction
-  vid.addEventListener('canplaythrough',()=>{ vid.play().catch(()=>{}); },{once:true});
-  document.addEventListener('click',()=>{ vid.play().catch(()=>{});   _nitroBialVid.play().catch(()=>{});
-},{once:true});
-  return tex;
-}
-
-// -- Build all 5 left-wall screen textures -------------------------------------
-const airaTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/b37a34e16_95fd8b016_1769377123464.mp4');
-const ironsiteTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/1be3308cc_b325054e0_PhantomPresence.mp4');
-// NitroBial - canvas dimmer so video plays at reduced brightness
-const _nitroBialVid = document.createElement('video');
-_nitroBialVid.src = 'https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/f9c9d4b8b_deb3464aa_NitroBialLogoAnimation.mp4';
-_nitroBialVid.crossOrigin='anonymous'; _nitroBialVid.loop=true; _nitroBialVid.muted=true; _nitroBialVid.playsInline=true;
-_nitroBialVid.style.display='none'; document.body.appendChild(_nitroBialVid);
-const _nitroCanvas = document.createElement('canvas');
-_nitroCanvas.width=1280; _nitroCanvas.height=720;
-const _nitroCtx = _nitroCanvas.getContext('2d');
-const nitrobialTexData = new THREE.CanvasTexture(_nitroCanvas);
-nitrobialTexData.colorSpace = THREE.SRGBColorSpace;
-// update in animation loop - registered below
-window._nitroBialUpdate = function(){
-  if(_nitroBialVid.readyState >= 2){
-    _nitroCtx.clearRect(0,0,640,360);
-    _nitroCtx.globalAlpha = 0.58;
-    _nitroCtx.drawImage(_nitroBialVid,0,0,1280,720);
-    _nitroCtx.globalAlpha = 1.0;
-    nitrobialTexData.needsUpdate = true;
-  }
-};
-
-// -- Slot 5 - TrueSite Live Data canvas screen -----------------------------
-function mkGrantScreen(){
-  return mkTex(1280,800,(ctx,W,H)=>{
-    ctx.fillStyle='#020408'; ctx.fillRect(0,0,W,H);
-    // Subtle dot grid bg
-    ctx.fillStyle='rgba(200,120,60,0.06)';
-    for(let x=12;x<W;x+=32){for(let y=12;y<H;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}}
-    // CRT scanlines
-    for(let y=0;y<H;y+=4){ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fillRect(0,y,W,2);}
-    // Header bar gradient
-    const hg=ctx.createLinearGradient(0,0,W,0);
-    hg.addColorStop(0,'rgba(180,100,40,0.22)');hg.addColorStop(0.5,'rgba(200,130,60,0.32)');hg.addColorStop(1,'rgba(180,100,40,0.22)');
-    ctx.fillStyle=hg;ctx.fillRect(0,0,W,50);
-    ctx.strokeStyle='rgba(200,130,60,0.60)'; ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(0,50);ctx.lineTo(W,50);ctx.stroke();
-    ctx.fillStyle='rgba(240,180,100,1)'; ctx.font='bold 19px Courier New';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(200,130,60,1)'; ctx.shadowBlur=12;
-    ctx.fillText('▶ TRUESITE // LIVE OPERATIONS', 16, 25); ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(0,255,120,1)'; ctx.font='bold 13px Courier New';
-    ctx.textAlign='right';
-    ctx.shadowColor='rgba(0,200,80,0.8)'; ctx.shadowBlur=8;
-    ctx.fillText('● CONNECTED', W-16, 25); ctx.shadowBlur=0;
-    // Data rows - 2 columns, 6 metrics
-    const rows=[
-      ['AIRA Scans Today','124'],
-      ['IronSite Jobs Active','37'],
-      ['KJO Risk Flags','8'],
-      ['NitroBial Reports','19'],
-      ['Revenue MTD','$48,220'],
-      ['Open Directives','3'],
-    ];
-    const rowH=116, col2=W/2;
-    rows.forEach(([label,val],i)=>{
-      const col=i%2===0?0:col2;
-      const row=Math.floor(i/2);
-      const y=60+row*rowH;
-      const cardG=ctx.createLinearGradient(col,y,col+col2-12,y+rowH-8);
-      cardG.addColorStop(0,'rgba(255,255,255,0.025)');
-      cardG.addColorStop(1,'rgba(255,255,255,0.005)');
-      ctx.fillStyle=cardG; ctx.fillRect(col+8,y+4,col2-16,rowH-8);
-      ctx.strokeStyle='rgba(200,130,60,0.18)'; ctx.lineWidth=1; ctx.strokeRect(col+8,y+4,col2-16,rowH-8);
-      ctx.fillStyle='rgba(170,170,200,0.80)'; ctx.font='13px Courier New';
-      ctx.textAlign='left'; ctx.textBaseline='top';
-      ctx.fillText(label, col+22, y+18);
-      ctx.fillStyle='rgba(240,190,100,1)'; ctx.font='bold 36px Courier New';
-      ctx.shadowColor='rgba(220,160,80,0.8)'; ctx.shadowBlur=10;
-      ctx.fillText(val, col+22, y+42); ctx.shadowBlur=0;
-      const barG=ctx.createLinearGradient(col+8,0,col+col2-8,0);
-      barG.addColorStop(0,'rgba(200,130,60,0)');
-      barG.addColorStop(0.5,'rgba(200,130,60,0.55)');
-      barG.addColorStop(1,'rgba(200,130,60,0)');
-      ctx.fillStyle=barG; ctx.fillRect(col+8,y+rowH-10,col2-16,2);
-    });
-    // Footer
-    ctx.fillStyle='rgba(10,16,30,0.90)';ctx.fillRect(0,H-36,W,36);
-    ctx.strokeStyle='rgba(200,130,60,0.35)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,H-36);ctx.lineTo(W,H-36);ctx.stroke();
-    ctx.fillStyle='rgba(160,120,80,0.75)'; ctx.font='11px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('SOVEREIGN INFRASTRUCTURE // TRUESITE v2.0 // ' + new Date().toLocaleTimeString(), W/2, H-18);
-  });
-}
-const mkGrantScreenTex = mkGrantScreen;
-const kjoTexData = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/353057817_1c4c5042e_1769377123464.mp4');
-const videoTex = makeVideoTex('https://base44.app/api/apps/6a0a7846a08a2bd55b05e1fe/files/mp/public/6a0a7846a08a2bd55b05e1fe/23a98b54b_34ffffbfa_Animated_Rose_Gold_Logo_Creation.mp4');
-
-// -- Right wall small screens (site data) --------------------------------------
-function mkMapScreen(){
-  return mkTex(1280,800,(ctx,W,H)=>{
-    ctx.fillStyle='#020509'; ctx.fillRect(0,0,W,H);
-    // Hex grid overlay
-    ctx.strokeStyle='rgba(30,80,200,0.18)'; ctx.lineWidth=1;
-    const hexR=34, hexH=Math.sqrt(3)*hexR, hexW=hexR*2;
-    for(let row=0;row<H/hexH+2;row++){
-      for(let col=0;col<W/(hexW*0.75)+2;col++){
-        const hx=col*hexW*0.75-20, hy=row*hexH+(col%2)*hexH*0.5-20;
-        ctx.beginPath();
-        for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);ctx.lineTo(hx+hexR*Math.cos(a),hy+hexR*Math.sin(a));}
-        ctx.closePath(); ctx.stroke();
-      }
-    }
-    // CRT scanlines
-    for(let y=0;y<H;y+=4){ctx.fillStyle='rgba(0,0,0,0.07)';ctx.fillRect(0,y,W,2);}
-    // Road grid
-    ctx.strokeStyle='rgba(45,100,240,0.45)'; ctx.lineWidth=1.5;
-    [0.3,0.48,0.64,0.78].forEach(t=>{ctx.beginPath();ctx.moveTo(W*t,0);ctx.lineTo(W*t,H);ctx.stroke();});
-    [0.28,0.45,0.62,0.78].forEach(t=>{ctx.beginPath();ctx.moveTo(0,H*t);ctx.lineTo(W,H*t);ctx.stroke();});
-    // Main roads
-    ctx.strokeStyle='rgba(80,130,255,0.65)'; ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(0,H*0.48);ctx.lineTo(W,H*0.48);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(W*0.48,0);ctx.lineTo(W*0.48,H);ctx.stroke();
-    // Zone blocks
-    [['rgba(10,30,60,0.50)',90,70,320,130],['rgba(8,25,55,0.50)',500,70,340,130],
-     ['rgba(10,30,60,0.50)',90,280,320,110],['rgba(8,25,55,0.50)',500,280,340,110]].forEach(([c,x,y,w,h])=>{
-      ctx.fillStyle=c;ctx.fillRect(x,y,w,h);
-      ctx.strokeStyle='rgba(50,100,255,0.30)';ctx.lineWidth=1;ctx.strokeRect(x,y,w,h);
-    });
-    // Pulse rings
-    const tx=W*0.5,ty=H*0.5;
-    [110,155,200].forEach((r,i)=>{
-      ctx.strokeStyle=`rgba(212,145,158,${0.22-i*0.06})`; ctx.lineWidth=1.5; ctx.setLineDash([5,5]);
-      ctx.beginPath();ctx.arc(tx,ty,r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-    });
-    // Target
-    ctx.fillStyle='rgba(212,145,158,1)';ctx.shadowColor='rgba(212,145,158,1)';ctx.shadowBlur=35;
-    ctx.beginPath();ctx.arc(tx,ty,12,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#ffffff';ctx.shadowBlur=0;
-    ctx.beginPath();ctx.arc(tx,ty,5,0,Math.PI*2);ctx.fill();
-    // Crosshair
-    ctx.strokeStyle='rgba(212,145,158,0.7)';ctx.lineWidth=1.5;
-    [[tx-55,ty,tx-16,ty],[tx+16,ty,tx+55,ty],[tx,ty-55,tx,ty-16],[tx,ty+16,tx,ty+55]].forEach(([x1,y1,x2,y2])=>{
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    });
-    // Corner brackets
-    const bSize=22;
-    [[90,90],[W-90,90],[90,H-90],[W-90,H-90]].forEach(([bx,by])=>{
-      ctx.strokeStyle='rgba(80,180,255,0.5)';ctx.lineWidth=2;
-      const dx=bx<W/2?1:-1, dy=by<H/2?1:-1;
-      ctx.beginPath();ctx.moveTo(bx,by+dy*bSize);ctx.lineTo(bx,by);ctx.lineTo(bx+dx*bSize,by);ctx.stroke();
-    });
-    // Coord labels
-    ['33.4484°N','112.0740°W','ALT: 1122ft'].forEach((t,i)=>{
-      ctx.fillStyle='rgba(80,180,255,0.90)'; ctx.font='bold 14px Courier New';
-      ctx.textAlign='left'; ctx.textBaseline='top';
-      ctx.shadowColor='rgba(60,140,255,0.7)'; ctx.shadowBlur=7;
-      ctx.fillText(t, 18, 60+i*22); ctx.shadowBlur=0;
-    });
-    // Header
-    const hg=ctx.createLinearGradient(0,0,W,0);
-    hg.addColorStop(0,'rgba(18,48,155,0.96)');hg.addColorStop(1,'rgba(8,18,75,0.96)');
-    ctx.fillStyle=hg;ctx.fillRect(0,0,W,46);
-    ctx.strokeStyle='rgba(80,160,255,0.75)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(0,46);ctx.lineTo(W,46);ctx.stroke();
-    ctx.fillStyle='rgba(140,210,255,1)'; ctx.font='bold 17px Courier New';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(80,160,255,1)'; ctx.shadowBlur=12;
-    ctx.fillText('▶ SITE MAP // LIVE TRACKING', 16, 23); ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(0,255,120,1)'; ctx.font='bold 13px Courier New';
-    ctx.textAlign='right';
-    ctx.fillText('● ACTIVE', W-16, 23);
-    // Footer
-    ctx.fillStyle='rgba(18,38,98,0.88)';ctx.fillRect(0,H-34,W,34);
-    ctx.strokeStyle='rgba(50,100,255,0.4)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,H-34);ctx.lineTo(W,H-34);ctx.stroke();
-    ctx.fillStyle='rgba(80,140,255,0.75)'; ctx.font='11px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('SOVEREIGN FIELD OPS // TRUESITE INTELLIGENCE', W/2, H-17);
-  });
-}
-function mkSatScreen(){
-  return mkTex(1280,800,(ctx,W,H)=>{
-    // Deep earth tones - satellite view
-    ctx.fillStyle='#060a06'; ctx.fillRect(0,0,W,H);
-    // Terrain patches
-    [['#1a2e14',80,50,140,100],['#213818',230,38,165,130],['#162010',420,60,145,88],
-     ['#1c2e14',590,48,200,112],['#111e0e',800,55,160,95],
-     ['#1a2c12',80,210,130,90],['#1e3216',240,200,170,110],['#162210',430,215,155,85],
-     ['#1c3018',600,208,180,100]].forEach(([c,x,y,w,h])=>{
-      ctx.fillStyle=c; ctx.beginPath();
-      ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,Math.PI*2);
-      ctx.fill();
-    });
-    // Road lines
-    ctx.strokeStyle='rgba(65,55,38,0.85)'; ctx.lineWidth=4;
-    [[0,H*0.45,W,H*0.45],[W*0.42,0,W*0.42,H],[W*0.62,0,W*0.62,H]].forEach(([x1,y1,x2,y2])=>{
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    });
-    ctx.lineWidth=2;
-    [[0,H*0.30,W*0.42,H*0.30],[W*0.62,H*0.60,W,H*0.60]].forEach(([x1,y1,x2,y2])=>{
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    });
-    // CRT scanlines
-    for(let y=0;y<H;y+=3){ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fillRect(0,y,W,1);}
-    // Satellite grid overlay
-    ctx.strokeStyle='rgba(0,200,80,0.12)'; ctx.lineWidth=1;
-    for(let x=0;x<W;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-    for(let y=0;y<H;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    // Target marker
-    const tx=W*0.34,ty=H*0.38;
-    [70,100,130].forEach((r,i)=>{
-      ctx.strokeStyle=`rgba(212,145,158,${0.30-i*0.08})`; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
-      ctx.beginPath();ctx.arc(tx,ty,r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-    });
-    ctx.fillStyle='rgba(212,145,158,1)';ctx.shadowColor='rgba(212,145,158,1)';ctx.shadowBlur=32;
-    ctx.beginPath();ctx.arc(tx,ty,10,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-    ctx.strokeStyle='rgba(212,145,158,0.8)';ctx.lineWidth=1.5;
-    [[tx-50,ty,tx-14,ty],[tx+14,ty,tx+50,ty],[tx,ty-50,tx,ty-14],[tx,ty+14,tx,ty+50]].forEach(([x1,y1,x2,y2])=>{
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    });
-    // Info box
-    ctx.fillStyle='rgba(4,14,6,0.82)'; ctx.fillRect(W*0.60,H*0.62,330,110);
-    ctx.strokeStyle='rgba(0,220,100,0.55)'; ctx.lineWidth=1.5; ctx.strokeRect(W*0.60,H*0.62,330,110);
-    ['TARGET: 1402 W MAPLE DR','STATUS: ACQUIRED','ZOOM: 18x  RES: 0.3m'].forEach((t,i)=>{
-      ctx.fillStyle=i===0?'rgba(0,255,120,1)':'rgba(0,200,100,0.80)';
-      ctx.font=i===0?'bold 14px Courier New':'12px Courier New';
-      ctx.textAlign='left'; ctx.textBaseline='top';
-      ctx.shadowColor='rgba(0,255,100,0.5)'; ctx.shadowBlur=6;
-      ctx.fillText(t, W*0.60+14, H*0.62+14+i*30); ctx.shadowBlur=0;
-    });
-    // Header
-    const hg=ctx.createLinearGradient(0,0,W,0);
-    hg.addColorStop(0,'rgba(4,22,8,0.96)');hg.addColorStop(1,'rgba(2,14,4,0.96)');
-    ctx.fillStyle=hg;ctx.fillRect(0,0,W,46);
-    ctx.strokeStyle='rgba(0,220,100,0.70)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(0,46);ctx.lineTo(W,46);ctx.stroke();
-    ctx.fillStyle='rgba(0,255,120,1)'; ctx.font='bold 17px Courier New';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(0,220,100,1)'; ctx.shadowBlur=12;
-    ctx.fillText('▶ SATELLITE // LIVE FEED', 16, 23); ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(212,145,158,1)'; ctx.font='bold 13px Courier New';
-    ctx.textAlign='right';
-    ctx.fillText('● TRACKING', W-16, 23);
-    // Footer
-    ctx.fillStyle='rgba(4,18,6,0.88)';ctx.fillRect(0,H-34,W,34);
-    ctx.strokeStyle='rgba(0,180,80,0.4)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,H-34);ctx.lineTo(W,H-34);ctx.stroke();
-    ctx.fillStyle='rgba(0,180,80,0.75)'; ctx.font='11px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('SOVEREIGN AERIAL INTELLIGENCE // TRUESITE SAT-1', W/2, H-17);
-  });
-}
-function mkThermalScreen(){
-  return mkTex(1280,800,(ctx,W,H)=>{
-    // Deep cold base
-    ctx.fillStyle='#000010'; ctx.fillRect(0,0,W,H);
-    // Full thermal gradient field
-    const g=ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,W*0.6);
-    g.addColorStop(0,'rgba(255,68,0,0.85)');
-    g.addColorStop(0.25,'rgba(255,136,0,0.65)');
-    g.addColorStop(0.55,'rgba(30,0,180,0.50)');
-    g.addColorStop(0.85,'rgba(0,0,60,0.30)');
-    g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    // Hot spots
-    [[W*0.34,H*0.38,88,'#ff4400'],[W*0.62,H*0.57,66,'#ff2200'],[W*0.50,H*0.72,46,'#ff8800'],
-     [W*0.28,H*0.60,38,'#ff6600'],[W*0.72,H*0.35,42,'#ff3300']].forEach(([x,y,r,c])=>{
-      const bg=ctx.createRadialGradient(x,y,0,x,y,r);
-      bg.addColorStop(0,c); bg.addColorStop(0.5,c+'88'); bg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-    });
-    // CRT scanlines
-    for(let y=0;y<H;y+=3){ctx.fillStyle='rgba(0,0,0,0.05)';ctx.fillRect(0,y,W,1);}
-    // Measurement reticle
-    ctx.strokeStyle='rgba(255,255,100,0.70)'; ctx.lineWidth=1.5; ctx.setLineDash([5,5]);
-    ctx.beginPath(); ctx.rect(W*0.22,H*0.26,W*0.56,H*0.48); ctx.stroke(); ctx.setLineDash([]);
-    // Corner ticks
-    [[W*0.22,H*0.26],[W*0.78,H*0.26],[W*0.22,H*0.74],[W*0.78,H*0.74]].forEach(([x,y])=>{
-      const dx=x<W/2?1:-1, dy=y<H/2?1:-1;
-      ctx.strokeStyle='rgba(255,255,0,0.90)'; ctx.lineWidth=2.5; ctx.setLineDash([]);
-      ctx.beginPath();ctx.moveTo(x,y+dy*18);ctx.lineTo(x,y);ctx.lineTo(x+dx*18,y);ctx.stroke();
-    });
-    // Temperature scale bar
-    const scaleG=ctx.createLinearGradient(W*0.74,0,W*0.74+40,0);
-    scaleG.addColorStop(0,'#0000cc');scaleG.addColorStop(0.5,'#ff8800');scaleG.addColorStop(1,'#ff0000');
-    ctx.fillStyle=scaleG; ctx.fillRect(W-68,H*0.12,28,H*0.72);
-    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1; ctx.strokeRect(W-68,H*0.12,28,H*0.72);
-    ['112°F','85°F','60°F','32°F'].forEach((t,i)=>{
-      ctx.fillStyle='rgba(255,240,200,0.85)'; ctx.font='10px Courier New';
-      ctx.textAlign='right'; ctx.textBaseline='middle';
-      ctx.fillText(t, W-74, H*0.12+i*(H*0.72/3));
-    });
-    // Info callouts
-    [['ZONE A3','MAX: 112°F',W*0.36,H*0.26-32,'#ff6600'],
-     ['ZONE B1','AVG: 87°F', W*0.64,H*0.74+12,'#ffaa00']].forEach(([zone,val,x,y,c])=>{
-      ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(x-70,y-12,140,36);
-      ctx.strokeStyle=c; ctx.lineWidth=1; ctx.strokeRect(x-70,y-12,140,36);
-      ctx.fillStyle=c; ctx.font='bold 12px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.shadowColor=c; ctx.shadowBlur=8;
-      ctx.fillText(zone+': '+val, x, y+6); ctx.shadowBlur=0;
-    });
-    // Header
-    const hg=ctx.createLinearGradient(0,0,W,0);
-    hg.addColorStop(0,'rgba(40,8,0,0.96)');hg.addColorStop(1,'rgba(20,4,0,0.96)');
-    ctx.fillStyle=hg;ctx.fillRect(0,0,W,46);
-    ctx.strokeStyle='rgba(255,140,0,0.75)';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(0,46);ctx.lineTo(W,46);ctx.stroke();
-    ctx.fillStyle='rgba(255,200,80,1)'; ctx.font='bold 17px Courier New';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(255,140,0,1)'; ctx.shadowBlur=12;
-    ctx.fillText('▶ THERMAL IMAGING // ACTIVE', 16, 23); ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(255,80,80,1)'; ctx.font='bold 13px Courier New';
-    ctx.textAlign='right';
-    ctx.fillText('● ANOMALY DETECTED', W-16, 23);
-    // Footer
-    ctx.fillStyle='rgba(30,5,0,0.88)';ctx.fillRect(0,H-34,W,34);
-    ctx.strokeStyle='rgba(255,100,0,0.4)';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(0,H-34);ctx.lineTo(W,H-34);ctx.stroke();
-    ctx.fillStyle='rgba(255,140,0,0.75)'; ctx.font='11px Courier New';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('AIRA THERMAL ENGINE // TRUESITE ROOFING AI', W/2, H-17);
-  });
-}
-
-const mapTexData=mkMapScreen();
-const satTexData=mkSatScreen();
-const thermalTexData=mkThermalScreen();
-
-// -- Knowledge graph - LIVE animated canvas ------------------------------------
-const KGW=1920,KGH=1280;
-const kgCanvas=mkCanvas(KGW,KGH);
-const kgCtx=kgCanvas.getContext('2d');
-const kgTex=new THREE.CanvasTexture(kgCanvas);
-const KG_NODES=[
-  {x:960,y:640,r:72,label:'SOURCE',col:'#d4919e'},
-  {x:440,y:320,r:40,label:'Yahriel',col:'#c8960c'},
-  {x:1400,y:290,r:40,label:'Azari',col:'#00c3ff'},
-  {x:1680,y:680,r:40,label:'Yahbana',col:'#818cf8'},
-  {x:1320,y:1040,r:40,label:'Yahziel',col:'#c8786e'},
-  {x:550,y:1020,r:40,label:'AIRA',col:'#22d3ee'},
-  {x:220,y:680,r:40,label:'Yahsei',col:'#10b981'},
-  {x:720,y:420,r:32,label:'War Room',col:'#d4919e'},
-  {x:1240,y:460,r:28,label:'NIM Stack',col:'#aaa'},
-  {x:840,y:940,r:28,label:'Redis',col:'#aaa'},
-];
-const KG_EDGES=[[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,7],[2,8],[5,9],[3,8],[4,9],[6,7],[7,0],[8,3]];
-let _lastKG=-1;
-function drawKG(t){
-  if(t-_lastKG<0.125)return; _lastKG=t; // 8fps max
-  kgCtx.fillStyle='rgba(3,2,10,0.9)'; kgCtx.fillRect(0,0,KGW,KGH);
-  // Grid drawn every frame (static pattern — low cost at 8fps, acceptable)
-  const pr=(Math.sin(t*2.2)*0.5+0.5)*50;
-  kgCtx.strokeStyle=`rgba(212,145,158,${Math.max(0,0.28-pr/280)})`; kgCtx.lineWidth=2;
-  kgCtx.beginPath(); kgCtx.arc(480,320,KG_NODES[0].r+pr,0,Math.PI*2); kgCtx.stroke();
-  KG_EDGES.forEach(([a,b],ei)=>{
-    const na=KG_NODES[a],nb=KG_NODES[b],phase=(t*0.55+ei*0.38)%1;
-    kgCtx.strokeStyle='rgba(150,70,95,0.28)'; kgCtx.lineWidth=2;
-    kgCtx.beginPath(); kgCtx.moveTo(na.x,na.y); kgCtx.lineTo(nb.x,nb.y); kgCtx.stroke();
-    const px=na.x+(nb.x-na.x)*phase,py=na.y+(nb.y-na.y)*phase;
-    kgCtx.fillStyle=na.col;
-    kgCtx.beginPath(); kgCtx.arc(px,py,8,0,Math.PI*2); kgCtx.fill();
-  });
-  KG_NODES.forEach((n,i)=>{
-    const p=Math.sin(t*1.6+i*0.9)*0.18+0.82;
-    kgCtx.shadowBlur=0;
-    kgCtx.fillStyle=n.col; kgCtx.beginPath(); kgCtx.arc(n.x,n.y,n.r*p,0,Math.PI*2); kgCtx.fill();
-    kgCtx.shadowBlur=0; kgCtx.fillStyle='rgba(255,255,255,0.95)';
-    kgCtx.font=`bold ${n.r<30?16:20}px Courier New`; kgCtx.textAlign='center'; kgCtx.textBaseline='middle';
-    kgCtx.fillText(n.label,n.x,n.y);
-  });
-  kgCtx.fillStyle='rgba(212,145,158,0.92)'; kgCtx.font='bold 20px Courier New'; kgCtx.textAlign='left'; kgCtx.textBaseline='top';
-  kgCtx.fillText('\u2B21 KNOWLEDGE GRAPH -- LIVE',14,14);
-  kgCtx.fillStyle='rgba(80,200,80,0.75)'; kgCtx.font='12px Courier New';
-  kgCtx.fillText(`NODES:${KG_NODES.length}  EDGES:${KG_EDGES.length}  ${new Date().toLocaleTimeString()}`,14,40);
-  kgTex.needsUpdate=true;
-}
-
-// --- CINEMATIC BEZEL HELPER --------------------------------------------------
-function addScreen(tex,w,h,px,py,pz,ry){
-  const offX=Math.abs(ry)>0.1?(ry>0?0.08:-0.08):0;
-  const offZ=Math.abs(ry)<0.1?0.08:0;
-
-  // ── Screen emission plane — MeshStandardMaterial with emissive glow ──────
-  const screenMat=new THREE.MeshStandardMaterial({
-    map:tex,
-    emissiveMap:tex,
-    emissive:new THREE.Color(0xffffff),
-    emissiveIntensity:0.22,
-    toneMapped:false,
-    roughness:0.0,
-    metalness:0.0
-  });
-  const s=new THREE.Mesh(new THREE.PlaneGeometry(w,h),screenMat);
-  s.position.set(px+offX,py,pz+offZ); s.rotation.y=ry;
-  s.castShadow=false; s.receiveShadow=false;
-  scene.add(s);
-
-  // ── Deep housing body — thick slab, dark brushed metal ───────────────────
-  const housingMat=new THREE.MeshStandardMaterial({
-    color:new THREE.Color(0x0a0608),
-    roughness:0.35,
-    metalness:0.88,
-    envMapIntensity:1.4
-  });
-  const housing=new THREE.Mesh(new THREE.BoxGeometry(w+0.28,h+0.28,0.14),housingMat);
-  housing.position.set(px,py,pz); housing.rotation.y=ry;
-  housing.castShadow=true; housing.receiveShadow=true;
-  scene.add(housing);
-
-  // ── Outer bezel ring — polished rose-gold bevel ───────────────────────────
-  const bezelMat=new THREE.MeshStandardMaterial({
-    color:new THREE.Color(0xc07840),
-    roughness:0.08,
-    metalness:0.96,
-    envMapIntensity:2.2
-  });
-  const bezel=new THREE.Mesh(new THREE.BoxGeometry(w+0.48,h+0.48,0.08),bezelMat);
-  bezel.position.set(px,py,pz); bezel.rotation.y=ry;
-  scene.add(bezel);
-
-  // ── Inner thin accent line — bright gold ring inside bezel ───────────────
-  const accentMat=new THREE.MeshStandardMaterial({
-    color:new THREE.Color(0xffe0a0),
-    emissive:new THREE.Color(0xffcc80),
-    emissiveIntensity:0.55,
-    roughness:0.04,
-    metalness:1.0
-  });
-  const accent=new THREE.Mesh(new THREE.BoxGeometry(w+0.30,h+0.30,0.09),accentMat);
-  accent.position.set(px,py,pz); accent.rotation.y=ry;
-  scene.add(accent);
-
-  // ── Screen-cast light — colored ambient bounce off wall ──────────────────
-  const ox=Math.abs(ry)>0.1?(ry>0?1.4:-1.4):0;
-  const oz=Math.abs(ry)<0.1?1.4:0;
-  const screenLight=new THREE.PointLight(0x5599dd,1.1,12,2);
-  screenLight.position.set(px+ox,py,pz+oz); scene.add(screenLight);
-
-  // ── Under-screen LED strip glow ───────────────────────────────────────────
-  const ledLight=new THREE.PointLight(0xd4919e,0.55,5,2);
-  ledLight.position.set(px+ox*0.3, py-(h/2+0.3), pz+oz*0.3); scene.add(ledLight);
-
-  // ── Subtle screen-face specular quad — glass reflection feel ─────────────
-  const glassMat=new THREE.MeshStandardMaterial({
-    color:new THREE.Color(0xffffff),
-    transparent:true,
-    opacity:0.04,
-    roughness:0.0,
-    metalness:0.0,
-    blending:THREE.AdditiveBlending,
-    depthWrite:false
-  });
-  const glassQuad=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glassMat);
-  glassQuad.position.set(px+offX*1.1,py,pz+offZ*1.1); glassQuad.rotation.y=ry;
-  scene.add(glassQuad);
-
-  return s;
-}
-
-// --- RIGHT WALL - BIG KG + 3 SMALL -------------------------------------------
-// Big KG screen - dominant, right wall center-top
-addScreen(kgTex,   12,8,   RW/2-0.12, FY+RH*0.64, -3,   -Math.PI/2);
-// 3 smaller screens - evenly spaced below on right wall
-addScreen(mapTexData,    4.5,2.85, RW/2-0.12, FY+RH*0.27, -10, -Math.PI/2);
-addScreen(satTexData,    4.5,2.85, RW/2-0.12, FY+RH*0.27,  -3, -Math.PI/2);
-addScreen(thermalTexData,4.5,2.85, RW/2-0.12, FY+RH*0.27,   5, -Math.PI/2);
-
-// --- LEFT WALL - TOP ROW: 5 PANEL TVs + BOTTOM: 1 WIDE TV ---------------------
-// Wall depth = RD=28, so Z spans from -14 to +14
-// 5 top-row screens evenly spaced across the wall
-const LW_TOPS=[
-  {tex:airaTexData,      z:-11.2},
-  {tex:ironsiteTexData,  z:-5.6},
-  {tex:nitrobialTexData, z:0},
-  {tex:kjoTexData,       z:5.6},
-  {tex:mkGrantScreen(),   z:11.2},
-];
-LW_TOPS.forEach(({tex,z})=>{
-  addScreen(tex, 4.9,3.2, -RW/2+0.12, FY+RH*0.72, z, Math.PI/2);
-});
-
-// Bottom: one wide map screen (left wall, lower half)
-addScreen(mapTexData, 13,4.2, -RW/2+0.12, FY+RH*0.3, 0, Math.PI/2);
-
-// --- ROUND TABLE - Cherry Oak Executive ---------------------------------------
-const TABLE_Y=0;
-
-// -- Black marbleized cherry oak surface --------------------------------------
-const tableSurface=mkTex(2048,2048,(ctx,W,H)=>{
-  // Deep obsidian base - almost black with warm undertone
-  const base=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.72);
-  base.addColorStop(0,'#1a0805');
-  base.addColorStop(0.35,'#110503');
-  base.addColorStop(0.7,'#0a0302');
-  base.addColorStop(1,'#060101');
-  ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
-
-  // Cherry oak grain - visible but dark, warm red-brown under the black
-  ctx.save(); ctx.translate(W/2,H/2);
-  for(let a=0;a<Math.PI*2;a+=0.014){
-    const len=W*0.53+Math.random()*W*0.05;
-    const alpha=(0.03+Math.random()*0.05).toFixed(3);
-    ctx.strokeStyle=`rgba(80,22,8,${alpha})`;
-    ctx.lineWidth=0.5+Math.random()*1.0;
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Black marble veining - bold sweeping veins across the surface
-  function drawVein(sx,sy,angle,length,width,alpha,color){
-    ctx.save();
-    ctx.translate(sx,sy); ctx.rotate(angle);
-    ctx.beginPath(); ctx.moveTo(0,0);
-    // Bezier vein - natural flowing curve
-    const cp1x=length*0.25+Math.random()*80-40;
-    const cp1y=(Math.random()-0.5)*120;
-    const cp2x=length*0.65+Math.random()*80-40;
-    const cp2y=(Math.random()-0.5)*160;
-    ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,length,( Math.random()-0.5)*80);
-    ctx.strokeStyle=color;
-    ctx.lineWidth=width; ctx.globalAlpha=alpha;
-    ctx.stroke();
-    // Secondary hairline alongside
-    ctx.lineWidth=width*0.3; ctx.globalAlpha=alpha*0.5;
-    ctx.stroke();
-    ctx.restore(); ctx.globalAlpha=1;
-  }
-
-  // Primary veins - deep charcoal/grey marble veins
-  const veins=[
-    [W*0.1,H*0.2, 0.22, W*0.85, 6,  0.72, '#1c1c1c'],
-    [W*0.05,H*0.6, 0.08, W*0.9,  5,  0.65, '#222222'],
-    [W*0.3,H*0.05, 0.38, W*0.75, 4,  0.60, '#181818'],
-    [W*0.0,H*0.42, 0.18, W*0.65, 3.5,0.55, '#141414'],
-    [W*0.6,H*0.0,  0.52, W*0.55, 3,  0.50, '#202020'],
-    [W*0.2,H*0.85,-0.12, W*0.70, 4,  0.58, '#1a1a1a'],
-    [W*0.75,H*0.7, 0.30, W*0.40, 2.5,0.48, '#161616'],
-  ];
-  veins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
-
-  // Warm gold/amber micro-veins - cherry wood bleeding through marble
-  const warmVeins=[
-    [W*0.25,H*0.3,  0.28, W*0.5, 1.8, 0.35, 'rgba(120,50,15,0.4)'],
-    [W*0.55,H*0.15, 0.42, W*0.45,1.5, 0.28, 'rgba(100,38,10,0.35)'],
-    [W*0.1,H*0.72,  0.12, W*0.6, 1.2, 0.30, 'rgba(110,44,12,0.38)'],
-    [W*0.7,H*0.5, -0.22,  W*0.5, 1.0, 0.25, 'rgba(90,32,8,0.30)'],
-  ];
-  warmVeins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
-
-  // White marble highlight veins - thin bright lines
-  const whiteVeins=[
-    [W*0.15,H*0.35, 0.20, W*0.6,  1.2, 0.22, 'rgba(200,195,190,0.5)'],
-    [W*0.4, H*0.08, 0.45, W*0.5,  0.8, 0.18, 'rgba(210,205,200,0.45)'],
-    [W*0.0, H*0.55, 0.10, W*0.45, 0.7, 0.16, 'rgba(195,190,185,0.4)'],
-  ];
-  whiteVeins.forEach(([sx,sy,ang,len,w,a,col])=>drawVein(sx,sy,ang,len,w,a,col));
-
-  // High-gloss lacquer sheen - strong specular highlight (top-left source)
-  const sheen=ctx.createRadialGradient(W*0.3,H*0.25,0,W/2,H/2,W*0.7);
-  sheen.addColorStop(0,'rgba(255,240,220,0.22)');
-  sheen.addColorStop(0.2,'rgba(200,180,160,0.10)');
-  sheen.addColorStop(0.6,'rgba(140,100,70,0.04)');
-  sheen.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sheen; ctx.fillRect(0,0,W,H);
-
-  // Edge vignette
-  const edge=ctx.createRadialGradient(W/2,H/2,W*0.35,W/2,H/2,W*0.56);
-  edge.addColorStop(0,'rgba(0,0,0,0)');
-  edge.addColorStop(1,'rgba(0,0,0,0.65)');
-  ctx.fillStyle=edge; ctx.fillRect(0,0,W,H);
-});
-
-// -- Cherry oak material -------------------------------------------------------
-const cherryOak=new THREE.MeshStandardMaterial({
-  map:tableSurface,
-  roughness:0.06,       // polished marble + lacquer -- mirror-like
-  metalness:0.08,
-  color:0xffffff        // let texture drive color fully
-});
-
-// -- Table top - thick slab (0.42 units = ~4 inches) -------------------------
-const tTop=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.42,128),cherryOak);
-tTop.position.y=TABLE_Y; tTop.receiveShadow=true; tTop.castShadow=true; scene.add(tTop);
-
-// -- Table edge band - engraved sequence 3-5-6-5-3-6-9-9-6-3 -----------------
-// Each character illuminates one by one, cycling around the full circumference
-const SEQUENCE='3|5|6|5|3|6|9|9|6|3|';
-const EDGE_W=4096, EDGE_H=160;
-const EDGE_FONT=`bold ${Math.round(EDGE_H*0.52)}px Georgia,serif`;
-
-// -- Off-screen measurement canvas --------------------------------------------
-const _emx=(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;return c.getContext('2d');})();
-_emx.font=EDGE_FONT;
-
-// Build full repeating character list with x positions
-const edgeChars=[]; // [{char, x, w}]
-{
-  // measure one tile
-  let tileW=0;
-  for(const ch of SEQUENCE){ tileW+=_emx.measureText(ch).width*0.90; }
-  const numTiles=Math.ceil(EDGE_W/tileW)+2;
-  const fullSeq=SEQUENCE.repeat(numTiles);
-  let px=6;
-  for(const ch of fullSeq){
-    const cw=_emx.measureText(ch).width*0.90;
-    if(px>EDGE_W+80) break;
-    edgeChars.push({char:ch, x:px, w:cw});
-    px+=cw;
-  }
-}
-const TOTAL_CHARS=edgeChars.length;
-// Seconds for one full lap around all chars
-const LAP_SECS=20;
-
-// -- Live draw canvas (redrawn every frame) -----------------------------------
-const edgeLiveCanvas=document.createElement('canvas');
-edgeLiveCanvas.width=EDGE_W; edgeLiveCanvas.height=EDGE_H;
-const elx=edgeLiveCanvas.getContext('2d');
-const edgeTex=new THREE.CanvasTexture(edgeLiveCanvas);
-edgeTex.colorSpace=THREE.SRGBColorSpace;
-edgeTex.needsUpdate=true;
-
-const edgeBand=new THREE.Mesh(
-  new THREE.CylinderGeometry(4.503,4.503,0.40,256,1,true),
-  new THREE.MeshBasicMaterial({map:edgeTex,side:THREE.DoubleSide,transparent:false,toneMapped:false})
-);
-edgeBand.position.y=TABLE_Y; scene.add(edgeBand);
-
-// Track last active char to throttle redraws
-let _edgeLastIdx=-1;
-
-function drawEdgeBand(t,dt){
-  // Continuous fractional position - NO floor/snap, moves fluidly
-  const progress=(t%LAP_SECS)/LAP_SECS;   // 0.0 -> 1.0 continuously
-  const activePos=progress*TOTAL_CHARS;    // fractional index, e.g. 47.63
-
-  // Throttle redraws to ~30fps max (no need faster for smooth look)
-  if(t-(_edgeLastIdx||0)<0.067) return; // 15fps max
-  _edgeLastIdx=t;
-
-  elx.clearRect(0,0,EDGE_W,EDGE_H);
-
-  // -- Pitch-black base ------------------------------------------------------
-  elx.fillStyle='#050101'; elx.fillRect(0,0,EDGE_W,EDGE_H);
-
-  // Carved border lines top & bottom (static - drawn once per frame, fast)
-  [EDGE_H*0.10, EDGE_H*0.90].forEach(gy=>{
-    elx.beginPath(); elx.moveTo(0,gy); elx.lineTo(EDGE_W,gy);
-    elx.strokeStyle='rgba(0,0,0,0.75)'; elx.lineWidth=3; elx.stroke();
-    elx.beginPath(); elx.moveTo(0,gy+1.5); elx.lineTo(EDGE_W,gy+1.5);
-    elx.strokeStyle='rgba(140,100,70,0.10)'; elx.lineWidth=1; elx.stroke();
-  });
-
-  // -- Smooth brightness falloff function ------------------------------------
-  // Uses a cosine bell curve - peaks at dist=0, smoothly falls to 0 at dist=WINDOW
-  const WINDOW=6; // how many chars on each side the glow reaches
-  function brightness(i){
-    // Signed fractional distance from the active position (wrap-aware)
-    let d=i-activePos;
-    // Wrap to shortest path around the circle
-    if(d> TOTAL_CHARS/2) d-=TOTAL_CHARS;
-    if(d<-TOTAL_CHARS/2) d+=TOTAL_CHARS;
-    const absd=Math.abs(d);
-    if(absd>=WINDOW) return 0;
-    // Cosine ease: 1.0 at center - 0.0 at WINDOW
-    return 0.5*(1+Math.cos(Math.PI*absd/WINDOW));
-  }
-
-  // -- Draw all characters ----------------------------------------------------
-  elx.font=EDGE_FONT;
-  elx.textBaseline='middle';
-  const cy=EDGE_H*0.5;
-
-  for(let i=0;i<edgeChars.length;i++){
-    const {char,x,w}=edgeChars[i];
-    const b=brightness(i); // 0.0 -> 1.0
-
-    if(b>0.01){
-      // -- Illuminated range ------------------------------------------------
-      // Halo glow - scales with brightness
-      if(b>0.3){
-        const halo=elx.createRadialGradient(x+w/2,cy,0,x+w/2,cy,w*2.2);
-        halo.addColorStop(0,`rgba(255,248,190,${(b*0.45).toFixed(3)})`);
-        halo.addColorStop(0.4,`rgba(230,190,90,${(b*0.20).toFixed(3)})`);
-        halo.addColorStop(1,'rgba(0,0,0,0)');
-        elx.fillStyle=halo;
-        elx.fillRect(x-w,cy-EDGE_H*0.42,w*3,EDGE_H*0.84);
-      }
-      // Carve shadow (always present for depth)
-      elx.fillStyle=`rgba(0,0,0,0.80)`;
-      elx.fillText(char,x+1.5,cy+1.8);
-      // Gold-white character - brightness drives opacity and warmth
-      const r=Math.round(255);
-      const g=Math.round(200+b*52);   // 200->252 as b->1
-      const bch=Math.round(80+b*130); // 80->210 as b->1
-      elx.fillStyle=`rgba(${r},${g},${bch},${(0.15+b*0.85).toFixed(3)})`;
-      elx.fillText(char,x,cy);
-      // Specular highlight at peak only
-      if(b>0.7){
-        elx.fillStyle=`rgba(255,255,255,${(b*0.4).toFixed(3)})`;
-        elx.fillText(char,x-0.6,cy-0.7);
-      }
-    } else {
-      // -- Dark / engraved - invisible base with faint carved edge ----------
-      elx.fillStyle='rgba(0,0,0,0.80)';
-      elx.fillText(char,x+1.4,cy+1.6);
-      elx.fillStyle='rgba(6,2,1,0.92)';
-      elx.fillText(char,x,cy);
-      elx.fillStyle='rgba(70,48,32,0.17)';
-      elx.fillText(char,x-0.7,cy-0.8);
-    }
-  }
-
-  edgeTex.needsUpdate=true;
-}
-
-// -- Top edge bevel ring - thin beveled lip ------------------------------------
-const bevelMat=new THREE.MeshStandardMaterial({color:0x3a1008,roughness:0.12,metalness:0.06});
-const tBevel=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.055,14,120),bevelMat);
-tBevel.rotation.x=Math.PI/2; tBevel.position.y=TABLE_Y+0.21; scene.add(tBevel);
-const tBevelB=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.04,10,120),bevelMat);
-tBevelB.rotation.x=Math.PI/2; tBevelB.position.y=TABLE_Y-0.21; scene.add(tBevelB);
-
-// -- Top bevel rim - Hebrew engraved scripture Acts 4:12 ----------------------
-// The scripture wraps the entire cherry-red torus bevel at the top edge
-// ------ ----------- -------- ---- --- ------ ------ ----------- ---- ----- ------- ----- ----------- ----------
-const SCRIPTURE_HEB='\u05D5\u05B0\u05D0\u05B5\u05D9\u05DF \u05D4\u05B7\u05D9\u05B0\u05E9\u05C1\u05D5\u05BC\u05E2\u05B8\u05D4 \u05D1\u05B0\u05BC\u05D0\u05B7\u05D7\u05B5\u05E8 \u05DB\u05B4\u05BC\u05D9 \u05DC\u05B9\u05D0 \u05E0\u05B4\u05EA\u05B7\u05BC\u05DF \u05EA\u05B7\u05BC\u05D7\u05B7\u05EA \u05D4\u05B7\u05E9\u05B8\u05BC\u05C1\u05DE\u05B7\u05D9\u05B4\u05DD \u05E9\u05B5\u05C1\u05DD \u05D0\u05B7\u05D7\u05B5\u05E8 \u05DC\u05B4\u05D1\u05B0\u05E0\u05B5\u05D9 \u05D0\u05B8\u05D3\u05B8\u05DD \u05D0\u05B2\u05E9\u05B6\u05C1\u05E8\u05BE\u05D1\u05BC\u05D5\u05B9 \u05E0\u05B4\u05D5\u05B8\u05BC\u05E9\u05B5\u05C1\u05E2\u05B7 \u2726 ';
-
-// Build the bevel texture - wraps around the torus circumference
-const rimTex=(()=>{
-  const RW=8192, RH=192; // bigger canvas = more resolution per character
-  const rc=document.createElement('canvas'); rc.width=RW; rc.height=RH;
-  const rx=rc.getContext('2d');
-
-  // Cherry-red base
-  const bg=rx.createLinearGradient(0,0,0,RH);
-  bg.addColorStop(0,'#3a0c08');
-  bg.addColorStop(0.4,'#4a1008');
-  bg.addColorStop(0.6,'#3d0e07');
-  bg.addColorStop(1,'#220807');
-  rx.fillStyle=bg; rx.fillRect(0,0,RW,RH);
-
-  // Thin carved border lines top & bottom
-  [RH*0.05, RH*0.95].forEach(gy=>{
-    rx.beginPath(); rx.moveTo(0,gy); rx.lineTo(RW,gy);
-    rx.strokeStyle='rgba(0,0,0,0.80)'; rx.lineWidth=4; rx.stroke();
-    rx.beginPath(); rx.moveTo(0,gy+2); rx.lineTo(RW,gy+2);
-    rx.strokeStyle='rgba(255,210,180,0.18)'; rx.lineWidth=1.5; rx.stroke();
-  });
-
-  // Hebrew text - sized to fill most of the band height
-  const FONT_SIZE=Math.round(RH*0.55);
-  rx.font=`${FONT_SIZE}px 'Times New Roman',serif`;
-  rx.textBaseline='middle';
-  rx.direction='ltr';
-
-  // Tile across full width
-  const tileW=rx.measureText(SCRIPTURE_HEB).width*0.90;
-  const numTiles=Math.ceil(RW/tileW)+2;
-  const fullText=SCRIPTURE_HEB.repeat(numTiles);
-
-  let tx=10;
-  const chars=[...fullText];
-  for(let ci=0;ci<chars.length && tx<RW+80;ci++){
-    const ch=chars[ci];
-    const cw=rx.measureText(ch).width*0.90;
-
-    // === ENGRAVED look: dark groove + strong bright highlight catch ===
-    // Shadow drop - the groove is deep
-    rx.fillStyle='rgba(0,0,0,0.95)';
-    rx.fillText(ch, tx+2, RH*0.5+2.5);
-
-    // Groove floor - very dark red-brown
-    rx.fillStyle='rgba(12,3,2,1.0)';
-    rx.fillText(ch, tx, RH*0.5);
-
-    // PRIMARY highlight - bright gold-white edge catch (top-left)
-    // This is what makes engraving readable - the light catches the raised edge
-    rx.fillStyle='rgba(255,220,170,0.72)';
-    rx.fillText(ch, tx-1.2, RH*0.5-1.5);
-
-    // Secondary soft highlight
-    rx.fillStyle='rgba(220,180,130,0.40)';
-    rx.fillText(ch, tx-0.5, RH*0.5-0.6);
-
-    tx+=cw;
-  }
-
-  const t=new THREE.CanvasTexture(rc);
-  t.colorSpace=THREE.SRGBColorSpace;
-  t.needsUpdate=true;
-  return t;
-})();
-
-// Torus - thicker tube so the scripture band is actually visible from camera
-const tRim=new THREE.Mesh(
-  new THREE.TorusGeometry(4.46, 0.18, 32, 256),
-  new THREE.MeshStandardMaterial({
-    map:rimTex,
-    roughness:0.35,
-    metalness:0.05,
-    color:0xffffff,
-    toneMapped:false
-  })
-);
-tRim.rotation.x=Math.PI/2; tRim.position.y=TABLE_Y+0.20; scene.add(tRim);
-
-// Thin rose-gold accent line above the scripture band
-const tRimAccent=new THREE.Mesh(
-  new THREE.TorusGeometry(4.50, 0.022, 10, 160),
-  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.05,metalness:0.96,emissive:0x3a1810,emissiveIntensity:0.20})
-);
-tRimAccent.rotation.x=Math.PI/2; tRimAccent.position.y=TABLE_Y+0.22; scene.add(tRimAccent);
-
-// -- Central pedestal column - turned cherry oak -------------------------------
-// Profile: wider at top & bottom, narrow waist - classic turned leg look
-const pedMat=new THREE.MeshStandardMaterial({color:0x3d1209,roughness:0.22,metalness:0.02});
-// Top cap
-const tPedCapT=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.62,0.12,32),pedMat.clone());
-tPedCapT.position.y=TABLE_Y-0.27; scene.add(tPedCapT);
-// Upper taper
-const tPedU=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.38,0.55,32),pedMat.clone());
-tPedU.position.y=TABLE_Y-0.66; scene.add(tPedU);
-// Waist ring (decorative turned detail)
-const tWaist=new THREE.Mesh(new THREE.TorusGeometry(0.42,0.055,12,40),
-  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.92}));
-tWaist.rotation.x=Math.PI/2; tWaist.position.y=TABLE_Y-0.92; scene.add(tWaist);
-// Lower taper
-const tPedL=new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.58,0.55,32),pedMat.clone());
-tPedL.position.y=TABLE_Y-1.20; scene.add(tPedL);
-// Bottom cap
-const tPedCapB=new THREE.Mesh(new THREE.CylinderGeometry(0.68,0.72,0.14,32),pedMat.clone());
-tPedCapB.position.y=TABLE_Y-1.52; scene.add(tPedCapB);
-
-// -- Four curved legs - sabre/queen anne style ---------------------------------
-// Each leg: starts at pedestal base, curves outward and down
-const legAngles=[Math.PI/4, Math.PI*3/4, Math.PI*5/4, Math.PI*7/4];
-legAngles.forEach(ang=>{
-  const lx=Math.cos(ang), lz=Math.sin(ang);
-  // Upper leg section - angled outward from pedestal
-  const legU=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.08,0.70,16),pedMat.clone());
-  legU.position.set(lx*0.85,TABLE_Y-1.72,lz*0.85);
-  legU.rotation.z= Math.cos(ang)*0.32;
-  legU.rotation.x=-Math.sin(ang)*0.32;
-  legU.castShadow=true; scene.add(legU);
-  // Lower leg section - more outward splay
-  const legL=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.055,0.65,16),pedMat.clone());
-  legL.position.set(lx*1.45,TABLE_Y-2.08,lz*1.45);
-  legL.rotation.z= Math.cos(ang)*0.52;
-  legL.rotation.x=-Math.sin(ang)*0.52;
-  legL.castShadow=true; scene.add(legL);
-  // Foot pad - brass/gold cap
-  const foot=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.12,0.07,16),
-    new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.08,metalness:0.90}));
-  foot.position.set(lx*1.9,TABLE_Y-2.38,lz*1.9); scene.add(foot);
-});
-
-// -- Cross stretcher - H-brace at mid-height -----------------------------------
-['x','z'].forEach(ax=>{
-  const s=new THREE.Mesh(
-    new THREE.CylinderGeometry(0.055,0.055,ax==='x'?3.2:3.2,12),
-    pedMat.clone()
-  );
-  if(ax==='x') s.rotation.z=Math.PI/2; else s.rotation.x=Math.PI/2;
-  s.position.y=TABLE_Y-2.02; scene.add(s);
-  // Center medallion on stretcher
-});
-const stretcherHub=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),
-  new THREE.MeshStandardMaterial({color:0xC89278,roughness:0.06,metalness:0.92}));
-stretcherHub.position.y=TABLE_Y-2.02; scene.add(stretcherHub);
-
-// FOL engraved overlay on table - carved groove effect
-const folCanvas=mkCanvas(1024,1024);
-const folCtx=folCanvas.getContext('2d');
-const folTex=new THREE.CanvasTexture(folCanvas);
-folTex.colorSpace=THREE.SRGBColorSpace;
-// Slight inset below table surface so it reads as carved INTO the slab
-const folDisc=new THREE.Mesh(
-  new THREE.CircleGeometry(4.44,128),
-  new THREE.MeshStandardMaterial({
-    map:folTex,
-    transparent:true,
-    side:THREE.DoubleSide,
-    depthWrite:false,
-    roughness:0.85,     // carved wood -- not shiny
-    metalness:0.0,
-    toneMapped:false
-  })
-);
-folDisc.rotation.x=-Math.PI/2;
-folDisc.position.y=TABLE_Y+0.222; // fractionally above slab face
-scene.add(folDisc);
-let lastFOL=-1;
-function drawFOL(t){
-  if(t-lastFOL<0.10)return; lastFOL=t; // 10fps max
-  const S=1024, C=512;
-  folCtx.clearRect(0,0,S,S);
-
-  const{r,g,b}=getColor(t);
-  const d=1/PHI;
-  // Phi-shifted secondary color
-  const r2c=Math.round(r*d), g2c=Math.round(g*d), b2c=Math.round(b*d);
-
-  // Scale: R=88 matches the 512->1024 upscale of original R=44
-  const R=88;
-
-  // -- Helper: draw one carved circle --------------------------------------
-  function carvedCircle(cx,cy,radius,phiR,phiG,phiB,alpha){
-    // 1. Outer shadow lip - dark edge that sells the depth illusion
-    folCtx.beginPath();
-    folCtx.arc(cx,cy,radius+2.5,0,Math.PI*2);
-    folCtx.strokeStyle=`rgba(0,0,0,0.55)`;
-    folCtx.lineWidth=5;
-    folCtx.stroke();
-
-    // 2. Inner shadow - the groove floor is darker
-    folCtx.beginPath();
-    folCtx.arc(cx,cy,radius,0,Math.PI*2);
-    folCtx.strokeStyle=`rgba(0,0,0,0.40)`;
-    folCtx.lineWidth=6;
-    folCtx.stroke();
-
-    // 3. Highlight lip on opposite side - simulates light catching the groove edge
-    folCtx.save();
-    folCtx.beginPath();
-    folCtx.arc(cx,cy,radius-1,Math.PI*1.1,Math.PI*1.9);
-    folCtx.strokeStyle=`rgba(255,240,200,0.18)`;
-    folCtx.lineWidth=2;
-    folCtx.stroke();
-    folCtx.restore();
-
-    // 4. Phi color pulse - faint luminance inside the groove (the carved channel glows)
-    folCtx.beginPath();
-    folCtx.arc(cx,cy,radius,0,Math.PI*2);
-    folCtx.strokeStyle=`rgba(${phiR},${phiG},${phiB},${alpha})`;
-    folCtx.lineWidth=2.2;
-    folCtx.stroke();
-  }
-
-  // -- Draw FOL geometry - same sacred sequence as before ------------------
-  // Center circle
-  carvedCircle(C, C, R, Math.round(r), Math.round(g), Math.round(b), 0.55);
-
-  // First ring - 6 petals
-  for(let i=0;i<6;i++){
-    const a=i*Math.PI/3;
-    carvedCircle(
-      C+Math.cos(a)*R, C+Math.sin(a)*R,
-      R,
-      Math.round(r), Math.round(g), Math.round(b), 0.50
-    );
-  }
-
-  // Second ring - outer petals (phi-shifted color)
-  for(let i=0;i<6;i++){
-    const a=i*Math.PI/3;
-    carvedCircle(
-      C+Math.cos(a)*2*R, C+Math.sin(a)*2*R,
-      R,
-      r2c, g2c, b2c, 0.32
-    );
-    carvedCircle(
-      C+Math.cos(a+Math.PI/6)*R*Math.sqrt(3),
-      C+Math.sin(a+Math.PI/6)*R*Math.sqrt(3),
-      R,
-      r2c, g2c, b2c, 0.28
-    );
-  }
-
-  // Outer containing circle - the boundary ring
-  folCtx.beginPath();
-  folCtx.arc(C,C,R*2.7,0,Math.PI*2);
-  folCtx.strokeStyle=`rgba(0,0,0,0.45)`;
-  folCtx.lineWidth=5; folCtx.stroke();
-  folCtx.beginPath();
-  folCtx.arc(C,C,R*2.7,0,Math.PI*2);
-  folCtx.strokeStyle=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.22)`;
-  folCtx.lineWidth=2; folCtx.stroke();
-
-  folTex.needsUpdate=true;
-}
-
-
-// Table area fill light - makes table surface visible
-const tableLight=new THREE.PointLight(0xfff4e8,1.2,16);
-tableLight.position.set(0,1.8,0); scene.add(tableLight);
-// --- SOURCE GLOBE - center hover ---------------------------------------------
-const srcCWCanvas=mkCanvas(2048,2048); const srcCCWCanvas=mkCanvas(2048,2048);
-const srcCWCtx=srcCWCanvas.getContext('2d'); const srcCCWCtx=srcCCWCanvas.getContext('2d');
-paintRing(srcCWCtx,2048,2048,'rgba(255,195,120,0.95)',0.38);
-paintRing(srcCCWCtx,2048,2048,'rgba(210,160,100,0.82)',0.38);
-const srcTexCW=new THREE.CanvasTexture(srcCWCanvas);
-srcTexCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCW.magFilter=THREE.LinearFilter; srcTexCW.anisotropy=16; srcTexCW.generateMipmaps=true;
-const srcTexCCW=new THREE.CanvasTexture(srcCCWCanvas);
-srcTexCCW.minFilter=THREE.LinearMipmapLinearFilter; srcTexCCW.magFilter=THREE.LinearFilter; srcTexCCW.anisotropy=16; srcTexCCW.generateMipmaps=true;
-const sourceGlobe=makeGlobe(3.6,srcTexCW,srcTexCCW,400,1.08);
-sourceGlobe.position.set(0,3.2,0); scene.add(sourceGlobe);
-const srcLight=new THREE.PointLight(0xffeedd,0.02,10); srcLight.position.set(0,2.4,0); scene.add(srcLight);
-
-// --- FAMILY SEATS -------------------------------------------------------------
-const MEMBERS=[
-  {name:'Marz',    role:'Founder',         color:null,      isMarz:true, online:true, angle:270},
-  {name:'Yahriel', role:'CEO',             color:'orig',    isMarz:false,online:true, angle:30},
-  {name:'Azari',   role:'CTO',             color:'#00c3ff', isMarz:false,online:true, angle:70},
-  {name:'Yahli-El',role:'COO',             color:'#a855f7', isMarz:false,online:false,angle:110},
-  {name:'Yahziel', role:'CVO',             color:'#c8786e', isMarz:false,online:true, angle:150},
-  {name:'AIRA',    role:'Vision AI',       color:'#22d3ee', isMarz:false,online:true, angle:190},
-  {name:'Jo Legal',role:'Legal',           color:'#f59e0b', isMarz:false,online:false,angle:230},
-  {name:'Yahsei',  role:'CGO',             color:'#10b981', isMarz:false,online:true, angle:310},
-  {name:'Yahbana', role:'Chief Architect', color:'#818cf8', isMarz:false,online:true, angle:350},
-];
-const seats=[];
-MEMBERS.forEach((m,i)=>{
-  const rad=(m.angle-90)*Math.PI/180;
-  const sx=Math.cos(rad)*5.85, sz=Math.sin(rad)*5.85;
-  const grp=new THREE.Group();
-  grp.position.set(sx,FY,sz);
-  grp.rotation.y=rad+Math.PI;
-  grp.userData={member:m, ph:i*0.72};
-  // -- BURNT OAK PILLAR SEAT - matches table set --------------------------------
-  const BURNT_OAK = new THREE.MeshStandardMaterial({
-    color:0x1A0800, roughness:0.72, metalness:0.05   // burnt/charred oak
-  });
-  const BURNT_MID = new THREE.MeshStandardMaterial({
-    color:0x2C1005, roughness:0.65, metalness:0.06   // mid-grain
-  });
-  const RGOLD = new THREE.MeshStandardMaterial({
-    color:0xC89278, roughness:0.08, metalness:0.96   // rose-gold -- exact table match
-  });
-
-  // -- MAIN PILLAR BODY - single turned column, tapered ---------------------
-  const pillarMain = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.22, 1.32, 64),
-    BURNT_OAK.clone()
-  );
-  pillarMain.position.set(0, 0.76, 0); pillarMain.castShadow=false; grp.add(pillarMain);
-
-  // -- TURNED RING DETAILS - spaced along pillar shaft ----------------------
-  [0.28, 0.55, 0.82, 1.08].forEach(ry=>{
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.215, 0.022, 12, 40),
-      BURNT_MID.clone()
-    );
-    ring.rotation.x = Math.PI/2;
-    ring.position.set(0, ry, 0); grp.add(ring);
-  });
-
-  // -- GOLD TRIM BANDS - top, middle, bottom --------------------------------
-  [1.28, 0.76, 0.22].forEach(gy=>{
-    const band = new THREE.Mesh(
-      new THREE.TorusGeometry(0.205, 0.014, 10, 40),
-      RGOLD.clone()
-    );
-    band.rotation.x = Math.PI/2;
-    band.position.set(0, gy, 0); grp.add(band);
-  });
-
-  // -- CAPITAL (top cap) - wide flat disc, gold trim -------------------------
-  const capital = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.28, 0.20, 0.06, 64),
-    BURNT_OAK.clone()
-  );
-  capital.position.set(0, 1.45, 0); grp.add(capital);
-
-  const capitalRim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.28, 0.016, 10, 40),
-    RGOLD.clone()
-  );
-  capitalRim.rotation.x = Math.PI/2;
-  capitalRim.position.set(0, 1.482, 0); grp.add(capitalRim);
-
-  // -- BASE (plinth) - wide footing, gold trim -------------------------------
-  const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.26, 0.28, 0.07, 64),
-    BURNT_OAK.clone()
-  );
-  base.position.set(0, 0.08, 0); grp.add(base);
-
-  const baseRim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.275, 0.016, 10, 40),
-    RGOLD.clone()
-  );
-  baseRim.rotation.x = Math.PI/2;
-  baseRim.position.set(0, 0.112, 0); grp.add(baseRim);
-
-  // Bottom foot plate - flat disc on floor
-  const footPlate = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.30, 0.30, 0.025, 32),
-    BURNT_MID.clone()
-  );
-  footPlate.position.set(0, 0.013, 0); grp.add(footPlate);
-  // globe
-  const isPhi=m.isMarz||m.color==='orig';
-  const gc1=mkCanvas(1024,1024), gc2=mkCanvas(1024,1024);
-  const gx1=gc1.getContext('2d'), gx2=gc2.getContext('2d');
-  if(isPhi){
-    paintRing(gx1,1024,1024,'rgba(255,195,120,0.95)');
-    paintRing(gx2,1024,1024,'rgba(210,160,100,0.82)');
-  } else {
-    const hex=m.color.replace('#','');
-    const cr=parseInt(hex.slice(0,2),16),cg=parseInt(hex.slice(2,4),16),cb=parseInt(hex.slice(4,6),16);
-    const d=1/PHI;
-    paintRing(gx1,1024,1024,`rgba(${cr},${cg},${cb},0.95)`);
-    paintRing(gx2,1024,1024,`rgba(${Math.round(cr*d)},${Math.round(cg*d)},${Math.round(cb*d)},0.82)`);
-  }
-  const gt1=new THREE.CanvasTexture(gc1); gt1.minFilter=THREE.LinearFilter; gt1.magFilter=THREE.LinearFilter; gt1.anisotropy=16;
-  const gt2=new THREE.CanvasTexture(gc2); gt2.minFilter=THREE.LinearFilter; gt2.magFilter=THREE.LinearFilter; gt2.anisotropy=16;
-  const gs=m.isMarz?0.60:0.48;
-  const globe=makeGlobe(gs,gt1,gt2);
-  globe.position.set(0,2.90,-0.08);
-  globe.userData.isPhi=isPhi; globe.userData.cwCtx=gx1; globe.userData.ccwCtx=gx2; globe.userData.cwTex=gt1; globe.userData.ccwTex=gt2;
-  grp.userData.globe=globe; grp.add(globe);
-  // pulse ring
-  const pCol=m.isMarz?0xFFD700:(m.color==='orig'?0xc8960c:parseInt((m.color||'#c8960c').slice(1),16));
-  if(m.online){
-    const pulse=new THREE.Mesh(new THREE.TorusGeometry(gs+0.1,0.02,10,48),new THREE.MeshBasicMaterial({color:pCol,transparent:true,opacity:0.65}));
-    pulse.rotation.x=Math.PI/2; pulse.position.set(0,2.70,-0.08);
-    grp.userData.pulse=pulse; grp.add(pulse);
-  }
-  // crown (Marz)
-  if(m.isMarz){
-    const crown=new THREE.Mesh(new THREE.TorusGeometry(0.34,0.038,10,40),new THREE.MeshStandardMaterial({color:0xFFD700,roughness:0.08,metalness:1.0,emissive:0x886600,emissiveIntensity:1.1}));
-    crown.rotation.x=Math.PI/2; crown.position.set(0,4.32,-0.08);
-    grp.userData.crown=crown; grp.add(crown);
-  }
-  // label sprite
-  const lc=mkCanvas(300,90); const lx=lc.getContext('2d');
-  const lCol=m.isMarz?'#FFD700':(m.color==='orig'?'#c8960c':(m.color||'#d4919e'));
-  lx.fillStyle='rgba(4,2,2,0.92)'; lx.beginPath(); lx.roundRect(3,3,294,84,11); lx.fill();
-  lx.strokeStyle=lCol; lx.lineWidth=2; lx.beginPath(); lx.roundRect(3,3,294,84,11); lx.stroke();
-  lx.fillStyle=lCol; lx.font='bold 20px Courier New'; lx.textAlign='center'; lx.fillText(m.name,150,28);
-  lx.fillStyle='#666'; lx.font='13px Arial'; lx.fillText(m.role,150,48);
-  lx.fillStyle=m.online?'#22c55e':'#444'; lx.beginPath(); lx.arc(136,68,5,0,Math.PI*2); lx.fill();
-  lx.fillStyle=m.online?'#22c55e':'#555'; lx.font='bold 11px Arial'; lx.textAlign='left'; lx.fillText(m.online?'ONLINE':'OFFLINE',148,72);
-  const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(lc),transparent:true}));
-  spr.scale.set(1.55,0.465,1); spr.position.set(0,3.67,-0.08);
-  grp.userData.sprite=spr; grp.add(spr);
-  // hit box
-  const hit=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,1.6,12),new THREE.MeshBasicMaterial({visible:false}));
-  hit.position.set(0,0.85,-0.08); hit.userData={member:m}; grp.add(hit); grp.userData.hit=hit;
-  scene.add(grp); seats.push(grp);
-});
-
-// --- CAMERA CONTROL ----------------------------------------------------------
-const mouse=new THREE.Vector2();
-let isDrag=false, px0=0, py0=0, rotY=0, rotX=-0.22, zoom=13;
-canvas.addEventListener('mousedown',e=>{isDrag=false;px0=e.clientX;py0=e.clientY;});
-canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect();
-  mouse.x=((e.clientX-r.left)/r.width)*2-1;
-  mouse.y=-((e.clientY-r.top)/r.height)*2+1;
-  if(e.buttons===1){
-    const dx=e.clientX-px0,dy=e.clientY-py0;
-    if(Math.abs(dx)>1.5||Math.abs(dy)>1.5){isDrag=true;rotY+=dx*0.006;rotX=Math.max(-0.82,Math.min(0.18,rotX+dy*0.004));px0=e.clientX;py0=e.clientY;}
-  }
-});
-canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(5.5,Math.min(25,zoom+e.deltaY*0.014));},{passive:false});
-const ray=new THREE.Raycaster();
-canvas.addEventListener('click',e=>{
-  if(isDrag)return;
-  ray.setFromCamera(mouse,camera);
-  const hits=ray.intersectObjects(_hitTargets);
-  if(!hits.length)return;
-  const m=hits[0].object.userData.member;
-  const el=document.getElementById('info');
-  el.textContent=m.isMarz?'\u{1F451} Marz -- Head of the Table':`>> ${m.name} | ${m.role}`;
-  el.style.opacity='1'; setTimeout(()=>el.style.opacity='0',3000);
-});
-
-// --- ANIMATE LOOP -------------------------------------------------------------
-const clock=new THREE.Clock();
-let lastColorUpdate=-1;
-// Pre-allocate raycaster hit targets once — prevents per-frame array GC
-const _hitTargets=seats.map(s=>s.userData.hit);
-renderer.setAnimationLoop(()=>{
-  if(window._nitroBialUpdate) window._nitroBialUpdate();
-  const t=clock.getElapsedTime(); const delta=clock.getDelta?clock.getDelta():0.016;
-  // camera orbit
-  const cx=Math.sin(rotY)*zoom*Math.cos(rotX);
-  const cz=Math.cos(rotY)*zoom*Math.cos(rotX);
-  const cy=zoom*Math.sin(-rotX)+1.5;
-  camera.position.set(cx,cy,cz); camera.lookAt(0,1.5,0);
-  drawFOL(t); drawKG(t);
-  drawEdgeBand(t,0.016);
-  // color update - throttled to 20fps
-  if(t-lastColorUpdate>0.25){
-    lastColorUpdate=t;
-    const{r,g,b}=getColor(t); const d=1/PHI;
-    const cwCSS=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.95)`;
-    const ccwCSS=`rgba(${Math.round(r*d)},${Math.round(g*d)},${Math.round(b*d)},0.82)`;
-    paintRing(srcCWCtx,2048,2048,cwCSS,0.22); srcTexCW.needsUpdate=true;
-    paintRing(srcCCWCtx,2048,2048,ccwCSS,0.22); srcTexCCW.needsUpdate=true;
-    srcLight.color.setRGB(r/255,g/255,b/255);
-    // update phi-cycle sibling globes
-    seats.forEach(s=>{
-      const g2=s.userData.globe;
-      if(!g2||!g2.userData.isPhi)return;
-      paintRing(g2.userData.cwCtx,1024,1024,cwCSS); g2.userData.cwTex.needsUpdate=true;
-      paintRing(g2.userData.ccwCtx,1024,1024,ccwCSS); g2.userData.ccwTex.needsUpdate=true;
-    });
-  }
-  // source globe
-  sourceGlobe.position.y=3.2+0.06*Math.sin(t*0.3);
-  sourceGlobe.rotation.y=t*0.04;
-  animGlobe(sourceGlobe,t);
-  // seats
-  const _doSeatAnim=(Math.round(t*60)%2===0); // animate seats every other frame
-  for(let _si=0;_si<seats.length;_si++){
-    const s=seats[_si];
-    const ph=s.userData.ph, bob=0.05*Math.sin(t*1.15+ph);
-    const globe=s.userData.globe;
-    if(globe){if(_doSeatAnim)animGlobe(globe,t); globe.position.y=2.90+bob;}
-    const pulse=s.userData.pulse;
-    if(pulse){const sc=1+0.18*Math.sin(t*1.9+ph);pulse.scale.setScalar(sc);pulse.material.opacity=0.28+0.38*Math.sin(t*1.9+ph);}
-    if(s.userData.sprite)s.userData.sprite.position.y=3.67+bob;
-    if(s.userData.crown){s.userData.crown.rotation.z=t*0.5;s.userData.crown.position.y=4.32+bob;}
-  }
-  // hover tooltip
-  ray.setFromCamera(mouse,camera);
-  const hits=ray.intersectObjects(_hitTargets);
-  const tip=document.getElementById('tooltip');
-  if(hits.length){
-    const m=hits[0].object.userData.member;
-    tip.textContent=m.isMarz?'\u{1F451} Marz -- Head of the Table':`Click to engage | ${m.name} | ${m.role}`;
-    tip.style.opacity='1'; canvas.style.cursor='pointer';
-  } else {
-    tip.style.opacity='0'; canvas.style.cursor='grab';
-  }
-  composer.render();
-});
+// Auto-refresh every 30 seconds
+loadAll();
+setInterval(loadAll, 30000);
 </script>
 </body>
 </html>
